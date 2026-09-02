@@ -11,6 +11,24 @@ DeepSeek Harness（DSH) 统计插件：聚合本机全部会话日志的 Token �
 - **今日入口**：侧边栏底部今日用量 + 逐小时模型堆叠图 + 昨日对比
 - **时间范围**：近 7/30/90 天 / 全部
 
+## 效果预览
+
+**设置页 · 总览指标卡与使用趋势**（指标卡可视化 + 单日/7日/30日趋势平滑曲线，悬浮查看明细）：
+
+<img src="images/image-1.png" width="888" alt="设置页总览指标卡与使用趋势">
+
+**设置页 · 时段分布与活动热力图**（24 小时直方图 + GitHub 风格年度热力图，悬浮查看当日明细）：
+
+<img src="images/image-2.png" width="888" alt="时段分布与活动热力图">
+
+**设置页 · 模型用量分布**（环形图 + 各模型明细，颜色与趋势图一致）：
+
+<img src="images/image-3.png" width="888" alt="模型用量分布">
+
+**侧边栏 · 今日用量入口**（今日逐小时模型堆叠 + 昨日对比）：
+
+<img src="images/image-4.png" width="397" alt="侧边栏今日用量入口">
+
 ## 统计口径
 
 - 总 Token = inputTokens + cacheReadTokens + cacheWriteTokens + outputTokens
