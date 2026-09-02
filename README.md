@@ -29,6 +29,16 @@ dsh plugin --profile web add github:Yinxe/dsh-token-stats
 
 `dsh plugin` 把参数转发给 profile 目录里的 pnpm，装完自动把插件写进 profile 的 `dsh.profile.bundles` 挂载列表 —— **无需手动改任何配置文件**。
 
+**一键 AI 安装**：把下面这段直接发给你的 DSH AI（复制即用，无需修改）：
+
+```text
+帮我安装 Token 用量统计插件（GitHub 仓库 Yinxe/dsh-token-stats，包名 @dshp-inx/token-stats）：
+1. 执行 dsh plugin --profile web add github:Yinxe/dsh-token-stats
+2. 重启 web 服务（dsh web），确认重启无报错
+3. 验证插件已生效（设置页出现「Token 用量统计」卡片，侧边栏底部出现「今日」用量入口）
+4. 打开设置页的 Token 用量统计，告诉我累计 Token 总量和今日用量
+```
+
 重启生效：
 
 ```sh
