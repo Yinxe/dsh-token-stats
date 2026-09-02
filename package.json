@@ -9,6 +9,8 @@
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
+    "./fold": "./lib/fold.js",
+    "./engine": "./lib/engine.js",
     "./client": "./client.js",
     "./package.json": "./package.json"
   },
@@ -38,5 +40,8 @@
     "client": {
       "platform": "web"
     }
+  },
+  "scripts": {
+    "test": "node test/fold.test.mjs"
   }
 }
