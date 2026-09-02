@@ -987,24 +987,30 @@ window.__ModuleLoader__.load({
 
         buildModelColors(data.models)
         const todayK = keyOf(Date.now())
-        const agg = aggregate(data.records, todayK)
         const yK = keyOf(fromKey(todayK) - 86400000)
-        const aggY = aggregate(data.records, yK)
-        const delta = aggY.total > 0 ? (agg.total - aggY.total) / aggY.total * 100 : null
+        // 单日精确聚合：aggregate 的第二参是起始日过滤（r.d < cutoff 跳过），
+        // 直接传昨日会把 昨日+今日 全算进去 → delta 恒为负。改为先算范围聚合再按天取。
+        const both = aggregate(data.records, yK)
+        const dayTotal = (k) => { const d = both.byDay.get(k); return d === undefined ? 0 : d.t }
+        const todayTotal = dayTotal(todayK)
+        const yTotal = dayTotal(yK)
+        const delta = yTotal > 0 ? (todayTotal - yTotal) / yTotal * 100 : null
 
         // 完全折叠（rail 模式）：今日总量可读数字 + 今日/昨日双条对比
         if (!wide) {
-          return el('div', { className: 'ts-today ts-todayRail', title: '今日 ' + fmtFull(agg.total) + ' tokens · 昨日 ' + fmtFull(aggY.total) },
+          return el('div', { className: 'ts-today ts-todayRail', title: '今日 ' + fmtFull(todayTotal) + ' tokens · 昨日 ' + fmtFull(yTotal) },
             el('div', { className: 'ts-todaylabel' }, '今日'),
-            el('div', { className: 'ts-todayval' }, fmt(agg.total)),
-            el(DualBars, { a: agg.total, b: aggY.total }))
+            el('div', { className: 'ts-todayval' }, fmt(todayTotal)),
+            el(DualBars, { a: todayTotal, b: yTotal }))
         }
 
         // 各模型今日逐小时序列（0..当前小时），配色与统计页一致
         const todayRecords = data.records.filter((r) => r.d === todayK)
         const nowHour = new Date().getHours()
         const modelHourSeries = []
-        for (const mk of Array.from(agg.byModel.keys()).sort()) {
+        // 今日模型列表从今日记录取（both.byModel 含昨日，会把昨天的模型也画进来）
+        const todayModels = new Set(todayRecords.map((r) => r.m))
+        for (const mk of Array.from(todayModels).sort()) {
           const vals = []
           for (let h = 0; h <= nowHour; h++) {
             let s = 0
@@ -1017,7 +1023,7 @@ window.__ModuleLoader__.load({
         return el('div', { className: 'ts-today', title: '今日 Token 用量 · ' + modelHourSeries.length + ' 个模型' },
           el('div', { className: 'ts-todayhead' },
             el('span', { className: 'ts-todaylabel' }, '今日 Token'),
-            el('span', { className: 'ts-todayval' }, fmt(agg.total))),
+            el('span', { className: 'ts-todayval' }, fmt(todayTotal))),
           el(TodayChart, { series: modelHourSeries, n: nowHour + 1 }),
           modelHourSeries.length > 0
             ? el('div', { className: 'ts-todaymodels' },
@@ -1030,7 +1036,7 @@ window.__ModuleLoader__.load({
             ? el('div', { className: 'ts-statgrow', style: { marginTop: 4, color: delta >= 0 ? 'var(--dsw-alias-state-success-primary)' : 'var(--dsw-alias-state-error-primary)', fontSize: 10.5 } },
                 el('span', { className: 'ts-arrow ' + (delta >= 0 ? 'ts-arrow-up' : 'ts-arrow-down') }),
                 el('span', null, (delta >= 0 ? '+' : '') + delta.toFixed(0) + '% vs 昨日'))
-            : el('div', { className: 'ts-muted', style: { fontSize: 10, marginTop: 4 } }, agg.total > 0 ? '昨日无消耗' : '开始使用后统计'))
+            : el('div', { className: 'ts-muted', style: { fontSize: 10, marginTop: 4 } }, todayTotal > 0 ? '昨日无消耗' : '开始使用后统计'))
       }
     }
 
