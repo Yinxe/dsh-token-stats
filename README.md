@@ -104,12 +104,14 @@ dsh web
 
 ```
 lib/index.js     Host 半：sessionQuery 聚合 + /ext/token-stats/data 路由
-lib/engine.js    聚合引擎（累计/峰值/连续天数/趋势/热力图/模型分解）
-lib/fold.js      会话日志折叠抽取（usage 终值覆盖采样、seed 跳过）
-lib/http.js      同源 JSON 路由
+lib/engine.js    聚合引擎（指纹持久缓存 + 后台渐进扫描 + 队列合并 + 删会话清理）
+lib/fsindex.js   会话日志文件索引/指纹/seed 跳过（纯 node:fs，可单测）
+lib/fold.js      会话日志折叠抽取（usage 终值覆盖采样、seed 跳过、路由半更新）
+lib/http.js      同源 JSON 路由（no-store）
 client.js        Client 半：__ModuleLoader__ bundle，设置页 + 侧边栏今日入口
+                 （聚合 useMemo 缓存；footer 菜单垂直布局兼容 Cordis 徽章共存）
 cordis.patch.yml bundle 层 patch：仅 insert 挂载行
-test/            fold 抽取单元测试（node test/fold.test.mjs）
+test/            单元测试（npm test：fold 抽取 ×7 + fsindex ×4）
 ```
 
 ## 免责声明

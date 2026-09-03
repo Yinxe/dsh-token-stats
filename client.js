@@ -246,6 +246,8 @@ window.__ModuleLoader__.load({
 /* ── 侧栏 footer actions 垂直布局：与 Cordis 徽章并排会横向溢出被裁（折叠侧栏仅 56px），改为垂直堆叠 ── */
 .hHd-Xa_footerActions{flex-direction:column;align-items:stretch}
 .hHd-Xa_collapsed .hHd-Xa_footerActions{align-items:center}
+/* 结构化回退（不依赖 dsh 打包类名 hash，随 dsh 升级改名仍生效）：slot 包装的父级即 footerActions */
+div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-items:stretch}
 .ts-todayRail{padding:3px 4px;box-sizing:border-box;min-width:0;max-width:100%;width:auto;margin:2px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;background:var(--dsw-alias-bg-layer-1);cursor:pointer}
 .ts-todayRail:hover{border-color:var(--dsw-alias-state-business-primary)}
 .ts-todayRail .ts-todaymodels,.ts-todayRail .ts-spark,.ts-todayRail .ts-statgrow{display:none}
@@ -337,6 +339,7 @@ window.__ModuleLoader__.load({
       return el('div', { className: 'ts-seg' }, props.options.map((o) =>
         el('button', {
           key: o.v, className: 'ts-seg-btn' + (props.current === o.v ? ' ts-seg-on' : ''),
+          'aria-pressed': props.current === o.v ? 'true' : 'false',
           onClick: () => props.onPick(o.v)
         }, o.t)))
     }
@@ -812,6 +815,20 @@ window.__ModuleLoader__.load({
           return () => { window.clearInterval(id) }
         }, [data, refresh])
 
+        // 昂贵派生（两次全量 aggregate + 颜色表）只随数据/范围重算：
+// 悬浮 tooltip 的每次 mousemove 只改 statPop，不再触发全量重算。
+        const derived = React.useMemo(() => {
+          if (data === null) return null
+          buildModelColors(data.models)
+          const tk = keyOf(Date.now())
+          const c = range === 'all' ? null : keyOf(fromKey(tk) - (Number(range) - 1) * 86400000)
+          return {
+            todayK: tk, cut: c,
+            scoped: c === null ? null : aggregate(data.records, c),
+            aggAll: aggregate(data.records, null)
+          }
+        }, [data, range])
+
         const children = []
         children.push(el('h3', { className: 'ts-title' }, 'Token 用量统计（token-stats）'))
         children.push(el('p', { className: 'ts-desc' },
@@ -838,11 +855,10 @@ window.__ModuleLoader__.load({
           return el('div', { className: 'ts-page' }, children)
         }
 
-        buildModelColors(data.models)
-        const todayK = keyOf(Date.now())
-        const cut = range === 'all' ? null : keyOf(fromKey(todayK) - (Number(range) - 1) * 86400000)
-        const scoped = cut === null ? null : aggregate(data.records, cut)
-        const aggAll = aggregate(data.records, null)
+        const todayK = derived.todayK
+        const cut = derived.cut
+        const scoped = derived.scoped
+        const aggAll = derived.aggAll
         const hasData = aggAll.first !== null
 
         children.push(el('div', { className: 'ts-toolbar' },
@@ -851,6 +867,9 @@ window.__ModuleLoader__.load({
             RANGES.map((o) => el('option', { key: o.v, value: o.v }, o.t))),
           el('span', { className: 'ts-hint', style: { marginLeft: 'auto' } },
             '更新于 ' + hhmm(data.generatedAt) + (loading ? ' · 刷新中…' : '')),
+          data.storage === 'disabled'
+            ? el('span', { className: 'ts-hint', title: '持久化缓存不可用（详见宿主日志 [token-stats] storage domain），统计仍正常运行，重启后需全量重扫' }, '⚠ 无持久缓存')
+            : null,
           el('button', { className: 'ts-btn', onClick: refresh, disabled: loading },
             el('span', { className: loading ? 'ts-spin' : '' }, '↻'),
             loading ? ' 刷新中…' : ' 刷新')))
@@ -937,7 +956,7 @@ window.__ModuleLoader__.load({
         children.push(el('div', { className: 'ts-grid' }, cards))
 
         if (statPop !== null) {
-          children.push(el('div', { className: 'ts-pop', style: tipPos(statPop.mx, statPop.my, 280, 40 + (statPop.content ? 0 : 0)) }, statPop.content))
+          children.push(el('div', { className: 'ts-pop', style: tipPos(statPop.mx, statPop.my, 280, 60) }, statPop.content))
         }
 
         if (scoped !== null) {
@@ -984,6 +1003,7 @@ window.__ModuleLoader__.load({
             trendSeries.map((s) =>
               el('button', {
                 key: s.name, className: 'ts-modelchip', 'data-off': s.visible ? '0' : '1',
+                'aria-pressed': s.visible ? 'true' : 'false',
                 onClick: () => { if (s.name === '__total__') setShowTotal(!showTotal); else setModelOff({ ...modelOff, [s.name]: !modelOff[s.name] }) },
                 title: '点击切换显示/隐藏'
               },

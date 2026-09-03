@@ -88,4 +88,18 @@ const T = 1700000000000
   console.log('✓ 6. dayKey 按本地自然日')
 }
 
-console.log('\n=== fold.js 全部 6 项测试通过 ===')
+// ── 7. request/context 半更新：只带 provider 时保留已知 model ──────────────
+{
+  const log = [
+    ev(0, 'request/header', { header: { config: { provider: 'p1', model: 'm1' } } }, T),
+    ev(1, 'request/context', { provider: 'p2' }, T + 10),  // 只有 provider
+    ev(2, 'assistant/chunk', { turn: 0, step: 0, chunk: { type: 'usage', usage: { inputTokens: 10, outputTokens: 5 } } }, T + 20)
+  ]
+  const r = foldSession(log, 0)
+  const keys = [...r.records.keys()].map((k) => k.split('|')[2])
+  assert.ok(keys.includes('p2/m1'), '半更新路由应为 p2/m1，实际：' + keys.join(','))
+  assert.ok(!keys.some((k) => k.includes('unknown')), '不应出现 unknown 归属')
+  console.log('✓ 7. 路由半更新保留已知半侧')
+}
+
+console.log('\n=== fold.js 全部 7 项测试通过 ===')

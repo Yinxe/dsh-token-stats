@@ -1,6 +1,6 @@
 {
   "name": "@dshp-inx/token-stats",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "DeepSeek Harness (DSH) statistics plugin: aggregates every local session log into cumulative/peak/streak token stats, daily & weekly trends, hour-of-day distribution, a GitHub-style year heatmap, and per-model breakdown, shown in a Settings page section themed with DSH tokens.",
@@ -43,6 +43,6 @@
     }
   },
   "scripts": {
-    "test": "node test/fold.test.mjs"
+    "test": "node test/fold.test.mjs && node test/fsindex.test.mjs"
   }
 }
