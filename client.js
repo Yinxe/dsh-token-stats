@@ -1,15 +1,18 @@
 /* @dshp-inx/token-stats client half — hand-authored __ModuleLoader__ bundle.
  *
- * 设置页：Token 用量统计 —— 单页（指标卡/趋势/时段/热力图/模型分布）+ 侧栏今日卡片。
+ * 设置页：Token 用量统计 —— 单页（指标卡/趋势/热力图/模型分布）+ 侧栏今日卡片。
  *
  * 结构（单 bundle 内 region 划分）：
  *   #region util     日期/格式化/统计纯函数
  *   #region css      DSH 主题 token 样式
  *   #region ui       原子组件（Seg/StatCard/Popover/ComposeBar/Sparkline/…）
- *   #region charts   图表（TrendChart/HourHist/Heatmap/Donut/TodayChart）
+ *   #region charts   图表（TrendChart/Heatmap/Donut/TodayChart）
  *   #region page     设置页主体 + 侧栏今日卡片 + apply
  *
- * 数据源：GET /ext/token-stats/data（Host 半聚合本机全部会话日志）。
+ * 数据源：GET /ext/dshp-inx-token-stats/data（Host 半聚合本机全部会话日志）。
+ * 偏好（侧栏开关/默认范围）：标准 settings 存储，经
+ * GET /ext/dshp-inx-token-stats/state 与 POST /ext/dshp-inx-token-stats/config
+ * 读写 settings.yaml（dshp-inx-token-stats 命名空间）。
  * 时效性：挂载即拉取 + 60s 自动刷新（可见时）+ 切回即刷 + partial 时 2s 加速。 */
 window.__ModuleLoader__.load({
   id: '@dshp-inx/token-stats',
@@ -467,23 +470,15 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         el('span', { className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, opacity: .28, display: 'block', height: Math.max(2, b / max * H).toFixed(1) + 'px', animationDelay: '150ms' } }))
     }
 
-    /** 可视化数值行：fmt 数字 + 迷你条（悬浮卡里替代纯数字）。 */
-    function VNum(props) {
-      const pct = props.total > 0 ? props.value / props.total * 100 : 0
-      return el('div', { className: 'ts-tiprow', style: { marginTop: 3 } },
-        el('span', { className: 'ts-tip-k' }, props.label || ''),
-        el('span', { className: 'ts-pop-bar', style: { height: 5, width: 70 } },
-          el('span', { className: 'ts-pop-fill', style: { width: pct.toFixed(1) + '%', background: props.color || BP } })),
-        el('span', { className: 'ts-tip-v' }, props.value > 0 ? fmt(props.value) : '0'))
-    }
-
     //#endregion
     //#region charts ─────────────────────────────────────────────────────
 
-    /** 多系列平滑趋势图：十字竖线 + fixed 悬浮明细（过滤当日 0 值模型）。 */
+    /** 多系列平滑趋势图：十字竖线 + fixed 悬浮明细（过滤 0 值系列；titles/emptyText 按小时/天口径传入）。 */
     function TrendChart(props) {
       const seriesList = props.series
       const labels = props.labels
+      const titles = props.titles || labels
+      const emptyText = props.emptyText || '当日无消耗'
       const W = 780, H = 250, pl = 54, pr = 14, pt = 14, pb = 28
       const n = labels.length
       const vis = seriesList.filter((s) => s.visible)
@@ -505,10 +500,16 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         kids.push(el('line', { key: 'g' + fi, x1: pl, x2: W - pr, y1: yy, y2: yy, className: 'ts-gridln' }))
         kids.push(el('text', { key: 'gt' + fi, x: pl - 8, y: yy + 4, textAnchor: 'end', className: 'ts-axislbl' }, fmt(top * fr[fi])))
       }
-      const stepI = Math.max(1, Math.ceil((n - 1) / 8))
+      // X 轴刻度：均匀分布（最多 9 个，含首末）。旧逻辑固定步长再硬补末点，
+      // 当 (n-1) 不能被步长整除时末段被压缩（如 30 天时 28→29 只隔 1 天宽度），
+      // 表现为“前期宽松、越到后面越拥挤”。按 j*(n-1)/(count-1) 四舍五入取整，
+      // 间隔恒定 ±1，视觉等距。
+      const tickCount = Math.min(n, 9)
       const xt = []
-      for (let i = 0; i < n; i += stepI) xt.push(i)
-      if (n > 0 && (xt.length === 0 || xt[xt.length - 1] !== n - 1)) xt.push(n - 1)
+      for (let j = 0; j < tickCount; j++) {
+        const idx = tickCount <= 1 ? 0 : Math.round(j * (n - 1) / (tickCount - 1))
+        if (xt.length === 0 || xt[xt.length - 1] !== idx) xt.push(idx)
+      }
       for (let xi = 0; xi < xt.length; xi++) {
         const i = xt[xi]
         kids.push(el('text', { key: 'x' + i, x: xs(i), y: H - 9, textAnchor: i === 0 ? 'start' : (i === n - 1 ? 'end' : 'middle'), className: 'ts-axislbl' }, labels[i]))
@@ -537,72 +538,19 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
             const rows = active.slice().sort((a, b) => (b.values[hover.i] || 0) - (a.values[hover.i] || 0))
             const pos = tipPos(hover.mx, hover.my, 270, 44 + rows.length * 18)
             return el('div', { className: 'ts-tipfixed', style: pos },
-              el('div', { className: 'ts-tiprow', style: { fontWeight: 600, marginBottom: 2 } }, labels[hover.i]),
+              el('div', { className: 'ts-tiprow', style: { fontWeight: 600, marginBottom: 2 } }, titles[hover.i]),
               rows.length > 0
                 ? rows.map((s) =>
                     el('div', { key: s.name, className: 'ts-tiprow' },
                       el('span', { className: 'ts-dot', style: { background: s.color, width: 8, height: 8 } }),
                       el('span', { className: 'ts-tip-k', style: { flex: '1 1 auto', overflow: 'hidden', textOverflow: 'ellipsis' } }, s.shortName),
                       el('span', { className: 'ts-tip-v' }, fmt(s.values[hover.i] || 0))))
-                : el('div', { className: 'ts-tiprow', style: { color: 'var(--dsw-alias-label-tertiary)' } }, '当日无消耗'))
+                : el('div', { className: 'ts-tiprow', style: { color: 'var(--dsw-alias-label-tertiary)' } }, emptyText))
           })()
         : null
 
       return el('div', { className: 'ts-svgwrap' },
         el('svg', { viewBox: '0 0 ' + W + ' ' + H, style: { width: '100%', height: 'auto', display: 'block' }, ref: svgRef }, kids),
-        tip)
-    }
-
-    /** 时段直方图：悬浮 = fmt 可读数 + 迷你柱峰值对比 + 占比条（全可视化）。 */
-    function HourHist(props) {
-      const byHour = props.byHour
-      const W = 640, H = 160, pl = 42, pr = 12, pt = 14, pb = 22
-      const top = niceMax(Math.max.apply(null, byHour.concat([1])))
-      const totalSum = byHour.reduce((s, v) => s + v, 0) || 1
-      const bw = (W - pl - pr) / 24
-      const ys = (v) => (H - pb) - (v / top) * (H - pb - pt)
-      const [hover, setHover] = React.useState(null)
-      const kids = []
-      const fr = [0, 0.5, 1]
-      for (let fi = 0; fi < fr.length; fi++) {
-        const yy = ys(top * fr[fi])
-        kids.push(el('line', { key: 'g' + fi, x1: pl, x2: W - pr, y1: yy, y2: yy, className: 'ts-gridln' }))
-        kids.push(el('text', { key: 'gt' + fi, x: pl - 8, y: yy + 4, textAnchor: 'end', className: 'ts-axislbl' }, fmt(top * fr[fi])))
-      }
-      for (let hIdx = 0; hIdx < 24; hIdx++) {
-        const v = byHour[hIdx]
-        const hgt = (v / top) * (H - pb - pt)
-        kids.push(el('rect', {
-          key: 'b' + hIdx, x: pl + hIdx * bw + bw * 0.15, y: (H - pb) - hgt, width: bw * 0.7,
-          height: Math.max(hgt, v > 0 ? 2 : 0), rx: 2, className: 'ts-rise',
-          style: { fill: BP, fillOpacity: hover !== null && hover.h === hIdx ? 1 : 0.72, animationDelay: (hIdx * 22) + 'ms' },
-          onMouseEnter: (e) => setHover({ h: hIdx, mx: e.clientX, my: e.clientY }),
-          onMouseMove: (e) => setHover({ h: hIdx, mx: e.clientX, my: e.clientY }),
-          onMouseLeave: () => setHover(null)
-        }))
-        if (hIdx % 3 === 0) kids.push(el('text', { key: 't' + hIdx, x: pl + hIdx * bw + bw / 2, y: H - 7, textAnchor: 'middle', className: 'ts-axislbl' }, String(hIdx)))
-      }
-      const tip = hover !== null
-        ? (() => {
-            const hIdx = hover.h
-            const v = byHour[hIdx]
-            const pct = v / totalSum * 100
-            const maxHour = Math.max(...byHour)
-            const pos = tipPos(hover.mx, hover.my, 210, 96)
-            return el('div', { className: 'ts-tipfixed', style: pos },
-              el('div', { className: 'ts-tiprow', style: { fontWeight: 600 } },
-                el('span', { className: 'ts-tip-k' }, hIdx + ':00–' + (hIdx + 1) + ':00'),
-                el('span', { className: 'ts-tip-v' }, v > 0 ? fmt(v) : '无用量')),
-              // 迷你柱：该小时 vs 全天峰值（含义用下方绘制 caption 说明，不用原生 title）
-              el('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 5, marginTop: 4, height: 26 } },
-                el('span', { style: { width: 14, borderRadius: '2px 2px 0 0', background: BP, display: 'block', height: Math.max(2, v / (maxHour || 1) * 22).toFixed(1) + 'px' } }),
-                el('span', { style: { width: 14, borderRadius: '2px 2px 0 0', background: BP, opacity: .25, display: 'block', height: 22 } })),
-              el('div', { style: { fontSize: 9, color: 'var(--dsw-alias-label-caption)', marginTop: 1 } }, '左：本小时　右：全天峰值'),
-              el(VNum, { label: '占全天', value: v, total: totalSum }))
-          })()
-        : null
-      return el('div', { className: 'ts-svgwrap' },
-        el('svg', { viewBox: '0 0 ' + W + ' ' + H, style: { width: '100%', height: 'auto', display: 'block' } }, kids),
         tip)
     }
 
@@ -784,19 +732,31 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
     const RANGES = [{ v: '7', t: '近7天' }, { v: '30', t: '近30天' }, { v: '90', t: '近90天' }, { v: 'all', t: '全部' }]
     const rangeText = (rv) => { for (let i = 0; i < RANGES.length; i++) { if (RANGES[i].v === rv) return RANGES[i].t } return '' }
 
-    /** 设置页主体（单页 + 顶部开关 + 指标卡可视化 + 四图表）。 */
+    /** 设置页主体（单页 + 顶部开关 + 指标卡可视化 + 三图表）。 */
     function createSection(bridge, prefs) {
       return function TokenStatsSection() {
         const [data, setData] = React.useState(null)
         const [err, setErr] = React.useState(null)
         const [loading, setLoading] = React.useState(true)
         const [range, setRange] = React.useState('30')
-        const [win, setWin] = React.useState('day')
+        const [trendRange, setTrendRange] = React.useState('30d')
         const [heatSpan, setHeatSpan] = React.useState('6')
         const [modelOff, setModelOff] = React.useState({})
         const [showTotal, setShowTotal] = React.useState(false)
         const [statPop, setStatPop] = React.useState(null)
-        const [todayOn, setTodayOn] = React.useState(prefs ? prefs.isTodayOn() : false)
+        const [todayOn, setTodayOn] = React.useState(false)
+        // 偏好经标准 settings 加载（挂载后回填；失败则保持默认）
+        React.useEffect(() => {
+          let alive = true
+          if (prefs && typeof prefs.getPrefs === 'function') {
+            prefs.getPrefs().then((p) => {
+              if (!alive || !p) return
+              setTodayOn(p.showToday === true)
+              if (typeof p.defaultRange === 'string') setRange(p.defaultRange)
+            }).catch(() => {})
+          }
+          return () => { alive = false }
+        }, [])
 
         // 刷新调度状态（hooks 区统一声明，early return 之前）
         const inflight = React.useRef(false)    // 请求进行中标记：防叠加
@@ -884,13 +844,13 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         const children = []
         children.push(el('h3', { className: 'ts-title' }, 'Token 用量统计（token-stats）'))
         children.push(el('p', { className: 'ts-desc' },
-          '聚合本机全部会话日志（含子代理会话；fork/resume 种子事件已去重）。数据每 60 秒自动刷新；时间范围作用于趋势 / 时段分布 / 模型分布，总览与热力图为全量数据。'))
+          '聚合本机全部会话日志（含子代理会话；fork/resume 种子事件已去重）。数据每 60 秒自动刷新；时间范围作用于当前范围卡片与模型分布，趋势图用自带的近24小时 / 近7天 / 近30天切换，总览与热力图为全量数据。'))
 
         // 顶部功能开关：侧栏「今日用量」小卡片
         children.push(el('div', { className: 'ts-swrow' },
           el('div', null,
             el('div', { className: 'ts-swlabel' }, '在侧边栏显示今日用量'),
-            el('div', { className: 'ts-swhint' }, '开启后左侧边栏底部显示今日 Token 消耗小卡片（含分色小时曲线与昨日对比）')),
+            el('div', { className: 'ts-swhint' }, '开启后左侧边栏底部显示今日 Token 消耗小卡片（含分色小时曲线与昨日对比；偏好存 settings.yaml · dshp-inx-token-stats）')),
           el('button', {
             className: 'ts-switch', role: 'switch', 'aria-checked': todayOn ? 'true' : 'false',
             onClick: () => { const next = !todayOn; setTodayOn(next); if (prefs) prefs.setToday(next) }
@@ -908,7 +868,6 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         }
 
         const todayK = derived.todayK
-        const cut = derived.cut
         const scoped = derived.scoped
         const aggAll = derived.aggAll
         const hasData = aggAll.first !== null
@@ -916,7 +875,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         const storageTipContent = el('div', null,
           el('div', { className: 'ts-pop-title' }, '持久化缓存不可用'),
           el('div', { className: 'ts-pop-row' },
-            el('span', { className: 'ts-pop-k' }, '统计仍正常运行；重启后需全量重扫。详情见宿主日志 [token-stats] storage domain')))
+            el('span', { className: 'ts-pop-k' }, '统计仍正常运行；重启后需全量重扫。详情见宿主日志 [dshp-inx-token-stats] storage domain')))
         const showStorageTip = (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: storageTipContent })
 
         children.push(el('div', { className: 'ts-toolbar' },
@@ -933,11 +892,15 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
             el('span', { className: loading ? 'ts-spin' : '' }, '↻'),
             loading ? ' 刷新中…' : ' 刷新')))
 
-        if (data.partial === true) {
+        // 条件块一律用 null 占位保住数组位置：显隐只装卸自己，后续兄弟不移位、
+        // 不重挂（重挂会重播全部入场动画——模型工作时 partial 每轮翻转即全页重播）
+        {
           const pct = data.total > 0 ? Math.round((data.scanned / data.total) * 100) : 0
-          children.push(el('div', { className: 'ts-notice ts-notice-empty', style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' } },
-            el('span', null, '后台统计中 ' + pct + '%（' + data.scanned + '/' + data.total + ' 个会话）—— 已扫描部分先展示，完成后自动补全。'),
-            data.errors > 0 ? el('span', { className: 'ts-muted' }, data.errors + ' 个会话读取失败已跳过') : null))
+          children.push(data.partial === true
+            ? el('div', { className: 'ts-notice ts-notice-empty', style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' } },
+              el('span', null, '后台统计中 ' + pct + '%（' + data.scanned + '/' + data.total + ' 个会话）—— 已扫描部分先展示，完成后自动补全。'),
+              data.errors > 0 ? el('span', { className: 'ts-muted' }, data.errors + ' 个会话读取失败已跳过') : null)
+            : null)
         }
 
         if (!hasData) {
@@ -986,10 +949,10 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           ]) }), onLeave: leaveStat,
           visual: [el(ComposeBar, { parts: [['缓存读', aggAll.cr, CC], ['缓存写', aggAll.cw, '#9a6ef1']] })]
         }))
-        if (data.peakStep) cards.push(el(StatCard, {
+        cards.push(data.peakStep ? el(StatCard, {
           label: '峰值单次请求', count: data.peakStep.tokens, sub: data.peakStep.model + ' · ' + dispDay(data.peakStep.d), delay: cards.length * 45
-        }))
-        if (peakDay) cards.push(el(StatCard, {
+        }) : null)
+        cards.push(peakDay ? el(StatCard, {
           label: '峰值单日', count: peakDay.t, sub: dispDay(peakDay.d), delay: cards.length * 45,
           onHover: (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: breakdown(peakDay.d + ' 各模型', Object.entries(peakDay.byModel || {}).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([mk, v]) => {
             return [mk, v, 1, peakDay.t]
@@ -998,7 +961,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
             const info = data.models[mk]
             return [info ? info.model : mk, v, modelColor(mk)]
           }) })]
-        }))
+        }) : null)
         cards.push(el(StatCard, { label: '日均消耗', count: avgDay, sub: '按活跃日平均', delay: cards.length * 45,
           visual: [el(Sparkline, { values: sparkVals, color: CO })] }))
         cards.push(el(StatCard, { label: '日消耗中位数', count: medDay, sub: '按活跃日取中位', delay: cards.length * 45 }))
@@ -1013,50 +976,84 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         cards.push(el(StatCard, { label: '最近使用', value: dispDay(aggAll.last), sub: aggAll.last }))
         children.push(el('div', { className: 'ts-grid' }, cards))
 
-        if (statPop !== null) {
-          children.push(el('div', { className: 'ts-pop', style: tipPos(statPop.mx, statPop.my, 280, 60) }, statPop.content))
-        }
+        children.push(statPop !== null
+          ? el('div', { className: 'ts-pop', style: tipPos(statPop.mx, statPop.my, 280, 60) }, statPop.content)
+          : null)
 
-        if (scoped !== null) {
-          children.push(el('div', { className: 'ts-card' },
+        children.push(scoped !== null
+          ? el('div', { className: 'ts-card' },
             el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' } },
               el('span', { className: 'ts-muted' }, '当前范围（' + rangeText(range) + '）'),
               el('span', { style: { fontVariantNumeric: 'tabular-nums' } },
-                fmt(scoped.total) + ' tokens · 输入 ' + fmt(scoped.i) + ' · 输出 ' + fmt(scoped.o) + ' · ' + fmtFull(scoped.n) + ' 次调用'))))
-        }
+                fmt(scoped.total) + ' tokens · 输入 ' + fmt(scoped.i) + ' · 输出 ' + fmt(scoped.o) + ' · ' + fmtFull(scoped.n) + ' 次调用')))
+          : null)
 
-        // ── 趋势（单日/7日/30日日均 + 模型筛选 + 平滑曲线）────
+        // ── 趋势（近24小时按小时 / 近7天按天 / 近30天按天 + 模型筛选 + 平滑曲线）──
+        // 独立于顶部时间范围：横轴点数恒等于窗口（24 / 7 / 30），按天档为原始单日值
+        //（不再做滚动日均）；悬浮标题用完整日期，跨天小时桶标注“昨日”。
         const sc = scoped !== null ? scoped : aggAll
-        let startK = aggAll.first
-        if (cut !== null && cut > startK) startK = cut
-        const dayList = buildDayList(startK, todayK)
-        const winN = win === 'day' ? 1 : Number(win)
-        // 滚动窗口「日均值」：总量/实际覆盖天数（曲线有起伏而非单调递增）
-        const winSeries = (getV) => dayList.map((_, i) => {
-          let s = 0, cnt = 0
-          for (let j = Math.max(0, i - winN + 1); j <= i; j++) { s += getV(dayList[j]); cnt++ }
-          return cnt > 0 ? s / cnt : 0
-        })
-        const labels = dayList.map(dispDay)
+        let trendLabels, trendTitles, trendEmpty
         const trendSeries = []
-        for (const mk of Array.from(sc.byModel.keys()).sort()) {
+        if (trendRange === '24h') {
+          // 近24小时：24 个整点小时桶（[now-23h .. now] 向整点取整），跨天部分即昨日同时段
+          const endH = new Date()
+          endH.setMinutes(0, 0, 0)
+          const slots = []
+          for (let k = 23; k >= 0; k--) {
+            const t = endH.getTime() - k * 3600000
+            slots.push({ d: keyOf(t), h: new Date(t).getHours() })
+          }
+          trendLabels = slots.map((s) => s.d === todayK ? s.h + ':00' : '昨日' + s.h + ':00')
+          trendTitles = slots.map((s) => cnDate(s.d) + ' ' + s.h + ':00–' + (s.h + 1) + ':00')
+          trendEmpty = '该小时无消耗'
+          const slotIdx = new Map()
+          for (let i = 0; i < slots.length; i++) slotIdx.set(slots[i].d + '|' + slots[i].h, i)
+          const hourVals = new Map()
+          for (const r of data.records) {
+            const idx = slotIdx.get(r.d + '|' + r.h)
+            if (idx === undefined) continue
+            let arr = hourVals.get(r.m)
+            if (arr === undefined) { arr = new Array(24).fill(0); hourVals.set(r.m, arr) }
+            arr[idx] += tok(r)
+          }
+          const hourTotal = new Array(24).fill(0)
+          for (const arr of hourVals.values()) { for (let i = 0; i < 24; i++) hourTotal[i] += arr[i] }
+          for (const mk of Array.from(hourVals.keys()).sort()) {
+            trendSeries.push({
+              name: mk, shortName: (data.models[mk] || {}).model || mk, color: modelColor(mk), isTotal: false,
+              values: hourVals.get(mk), visible: !modelOff[mk]
+            })
+          }
           trendSeries.push({
-            name: mk, shortName: (data.models[mk] || {}).model || mk, color: modelColor(mk), isTotal: false,
-            values: winSeries((k) => { const d = sc.byDay.get(k); return (d !== undefined && d.byModel[mk] !== undefined) ? d.byModel[mk] : 0 }),
-            visible: !modelOff[mk]
+            name: '__total__', shortName: '总 Token', color: '#8a94a6', isTotal: true,
+            values: hourTotal, visible: showTotal
+          })
+        } else {
+          // 近7天 / 近30天：按天原始值（所见即该日消耗）
+          const N = trendRange === '7d' ? 7 : 30
+          const dayList = buildDayList(keyOf(fromKey(todayK) - (N - 1) * 86400000), todayK)
+          trendLabels = dayList.map(dispDay)
+          trendTitles = dayList.map(cnDate)
+          trendEmpty = '当日无消耗'
+          for (const mk of Array.from(aggAll.byModel.keys()).sort()) {
+            trendSeries.push({
+              name: mk, shortName: (data.models[mk] || {}).model || mk, color: modelColor(mk), isTotal: false,
+              values: dayList.map((k) => { const d = aggAll.byDay.get(k); return (d !== undefined && d.byModel[mk] !== undefined) ? d.byModel[mk] : 0 }),
+              visible: !modelOff[mk]
+            })
+          }
+          trendSeries.push({
+            name: '__total__', shortName: '总 Token', color: '#8a94a6', isTotal: true,
+            values: dayList.map((k) => { const d = aggAll.byDay.get(k); return d === undefined ? 0 : d.t }),
+            visible: showTotal
           })
         }
-        trendSeries.push({
-          name: '__total__', shortName: '总 Token', color: '#8a94a6', isTotal: true,
-          values: winSeries((k) => { const d = sc.byDay.get(k); return d === undefined ? 0 : d.t }),
-          visible: showTotal
-        })
         const anyVisible = trendSeries.some((s) => s.visible)
         children.push(el('div', { className: 'ts-card' },
           el('div', { className: 'ts-chart-title' },
-            'Token 使用趋势（' + (win === 'day' ? '单日' : win + ' 日日均') + ' · 悬浮查看明细）',
+            'Token 使用趋势（' + (trendRange === '24h' ? '近24小时按小时' : (trendRange === '7d' ? '近7天按天' : '近30天按天')) + ' · 悬浮查看明细）',
             el('span', { style: { display: 'inline-flex', gap: 6 } },
-              el(Seg, { options: [{ v: 'day', t: '单日' }, { v: '7', t: '7日' }, { v: '30', t: '30日' }], current: win, onPick: setWin }))),
+              el(Seg, { options: [{ v: '24h', t: '近24小时' }, { v: '7d', t: '近7天' }, { v: '30d', t: '近30天' }], current: trendRange, onPick: setTrendRange }))),
           el('div', { className: 'ts-legend', style: { marginBottom: 8, marginTop: 0 } },
             trendSeries.map((s) =>
               el('button', {
@@ -1068,13 +1065,8 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
                 el('span', { className: 'ts-mc-name' }, s.shortName))),
             el('span', { className: 'ts-hint', style: { marginLeft: 6 } }, '默认隐藏总曲线')),
           anyVisible
-            ? el(TrendChart, { key: range + '-' + win, series: trendSeries, labels })
+            ? el(TrendChart, { key: trendRange, series: trendSeries, labels: trendLabels, titles: trendTitles, emptyText: trendEmpty })
             : el('div', { className: 'ts-empty' }, '全部曲线已隐藏 —— 点击上方标签恢复')))
-
-        // ── 时段分布（悬浮全可视化）────────────────────────────
-        children.push(el('div', { className: 'ts-card' },
-          el('div', { className: 'ts-chart-title' }, '时段分布（' + rangeText(range) + '，按小时 · 悬浮查看明细）'),
-          el(HourHist, { key: range, byHour: sc.byHour })))
 
         // ── 热力图（1/3/6/12 月 + 当日明细悬浮）───────────────
         const HEAT_OPS = [0.16, 0.3, 0.5, 0.72, 0.95]
@@ -1238,53 +1230,74 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 
       const bridge = {
         getData: async () => {
-          const response = await fetch('/ext/token-stats/data', { cache: 'no-store' })
+          const response = await fetch('/ext/dshp-inx-token-stats/data', { cache: 'no-store' })
+          return response.json()
+        },
+        getPrefs: async () => {
+          try {
+            const response = await fetch('/ext/dshp-inx-token-stats/state', { cache: 'no-store' })
+            const value = await response.json()
+            return (value && value.ok && value.config) || null
+          } catch { return null }
+        },
+        savePrefs: async (patchValue) => {
+          const response = await fetch('/ext/dshp-inx-token-stats/config', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(patchValue || {}),
+            cache: 'no-store'
+          })
           return response.json()
         }
       }
 
       const sectionStyle = document.createElement('style')
-      sectionStyle.setAttribute('data-plugin-css', 'token-stats/settings.css')
+      sectionStyle.setAttribute('data-plugin-css', 'dshp-inx-token-stats/settings.css')
       sectionStyle.textContent = CSS
       document.head.appendChild(sectionStyle)
-      ctx.effect(() => () => sectionStyle.remove(), 'token-stats: section styles')
+      ctx.effect(() => () => sectionStyle.remove(), 'dshp-inx-token-stats: section styles')
 
-      // 「今日用量」侧栏开关（localStorage 持久化——插件运行时偏好）
-      const TODAY_KEY = 'token-stats.sidebar-today'
-      const readTodayPref = () => {
-        try { return window.localStorage.getItem(TODAY_KEY) === '1' } catch { return false }
-      }
-      const writeTodayPref = (on) => {
-        try { on ? window.localStorage.setItem(TODAY_KEY, '1') : window.localStorage.removeItem(TODAY_KEY) } catch {}
-      }
+      // 旧 localStorage 开关一次性上收至标准 settings（仅当用户曾显式打开过；
+      // storages 文件迁移由部署者手动完成，插件代码不做）。
+      try {
+        if (window.localStorage.getItem('token-stats.sidebar-today') === '1') {
+          window.localStorage.removeItem('token-stats.sidebar-today')
+          bridge.savePrefs({ showToday: true }).catch(() => {})
+        }
+      } catch {}
 
-      // 开关 → 侧栏卡片 跨组件同步（自定义事件）
+      // 开关 → 侧栏卡片 跨组件同步（自定义事件；真值在标准 settings 里）
       const todayPrefListeners = new Set()
-      window.addEventListener('token-stats:today-toggle', (ev) => {
+      window.addEventListener('dshp-inx-token-stats:today-toggle', (ev) => {
         for (const fn of todayPrefListeners) fn(!!(ev.detail && ev.detail.on))
       })
 
       const Section = createSection(bridge, {
-        isTodayOn: readTodayPref,
-        setToday: (on) => { writeTodayPref(on); window.dispatchEvent(new CustomEvent('token-stats:today-toggle', { detail: { on } })) }
+        getPrefs: bridge.getPrefs,
+        setToday: (on) => {
+          bridge.savePrefs({ showToday: on === true }).catch(() => {})
+          window.dispatchEvent(new CustomEvent('dshp-inx-token-stats:today-toggle', { detail: { on } }))
+        }
       })
       slots.inject('settings.section', () => slots.register(
-        { name: 'settings.section', id: 'token-stats', order: 27, label: 'Token 用量统计' },
+        { name: 'settings.section', id: 'dshp-inx-token-stats', order: 27, label: 'Token 用量统计' },
         Section
       ))
 
       const TodayCard = createTodayCard(bridge)
       function TodaySidebarEntry(props) {
-        const [on, setOn] = React.useState(readTodayPref())
+        const [on, setOn] = React.useState(null)
         React.useEffect(() => {
+          let alive = true
+          bridge.getPrefs().then((p) => { if (alive && p) setOn(p.showToday === true) }).catch(() => {})
           const fn = (v) => setOn(v)
           todayPrefListeners.add(fn)
-          return () => { todayPrefListeners.delete(fn) }
+          return () => { todayPrefListeners.delete(fn); alive = false }
         }, [])
         return on === true ? el(TodayCard, props) : null
       }
       slots.inject('sidebar.footer.action', () => slots.register(
-        { name: 'sidebar.footer.action', id: 'token-stats-today' },
+        { name: 'sidebar.footer.action', id: 'dshp-inx-token-stats-today' },
         TodaySidebarEntry
       ))
     }

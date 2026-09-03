@@ -1,7 +1,7 @@
 # @dshp-inx/token-stats bundle patch: Token usage statistics for DeepSeek Harness.
-# Host half: sessionQuery-based aggregation + /ext/token-stats/data route.
+# Host half: sessionQuery-based aggregation + /ext/dshp-inx-token-stats/data route.
 # Client half: Settings page section with overview/trend/heatmap/models tabs.
 
 - insert:
-    - id: token-stats
+    - id: dshp-inx-token-stats
       name: "@dshp-inx/token-stats"

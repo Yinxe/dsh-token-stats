@@ -19,6 +19,7 @@
     "client.js",
     "cordis.patch.yml",
     "README.md",
+    "LICENSE",
     "images"
   ],
   "keywords": [
@@ -44,5 +45,13 @@
   },
   "scripts": {
     "test": "node test/fold.test.mjs && node test/fsindex.test.mjs && node test/async.test.mjs"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yinxe/dsh-token-stats.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Yinxe/dsh-token-stats/issues"
+  },
+  "homepage": "https://github.com/Yinxe/dsh-token-stats#readme"
 }

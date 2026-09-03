@@ -82,9 +82,9 @@ dsh web
 适合想改源码、或 GitHub 不可达的场景。clone 后用 `add ./<目录>` 安装 —— **依赖同样按插件真实包名（`@dshp-inx/token-stats`）登记**，后续 update / remove 与 GitHub 安装完全一致。link 安装的源码改动**即时生效**（client 半刷新页面即可，host 半需重启 `dsh web`）：
 
 ```sh
-git clone git@github.com:Yinxe/dsh-token-stats.git ~/.dsh/plugins/token-stats
+git clone git@github.com:Yinxe/dsh-token-stats.git ~/.dsh/plugins/dsh-token-stats
 cd ~/.dsh/plugins
-dsh plugin --profile web add ./token-stats
+dsh plugin --profile web add ./dsh-token-stats
 dsh web
 ```
 
@@ -100,20 +100,49 @@ dsh plugin --profile web remove "@dshp-inx/token-stats"
 dsh web
 ```
 
-`remove` 会自动从 `dsh.profile.bundles` 撤下挂载；clone 安装的再删掉 `~/.dsh/plugins/token-stats` 目录即可。
+`remove` 会自动从 `dsh.profile.bundles` 撤下挂载；clone 安装的再删掉 `~/.dsh/plugins/dsh-token-stats` 目录即可。
+
+## 配置（标准 settings 存储）
+
+用户偏好持久化到 `settings.yaml` 的 `dshp-inx-token-stats` 命名空间，设置页改完即时生效，外部编辑热重载：
+
+```yaml
+dshp-inx-token-stats:
+  showToday: false   # false=设置页折叠今日入口，true 显示侧边栏关联
+  defaultRange: "30" # 默认时间范围：7 | 30 | 90 | all
+```
+
+`cordis.patch.yml` 的 `config:` 仍可覆盖默认值（settings 的 base 层）。
+
+## 同源路由
+
+| 方法 | 路径 | 作用 |
+|------|------|------|
+| GET | `/ext/dshp-inx-token-stats/data` | 聚合快照（overview/trend/heatmap/models/today） |
+| GET | `/ext/dshp-inx-token-stats/state` | 当前偏好快照（showToday/defaultRange） |
+| POST | `/ext/dshp-inx-token-stats/config` | 保存偏好补丁，写 `settings.yaml` |
+
+全部带同源校验与 `no-store`。
+
+## 测试
+
+```sh
+npm test                          # fold ×7 + fsindex ×4 + async ×4
+node --check lib/index.js && node --check client.js
+```
 
 ## 代码结构
 
 ```
-lib/index.js     Host 半：sessionQuery 聚合 + /ext/token-stats/data 路由
+lib/index.js     Host 半：sessionQuery 聚合 + 标准 settings 偏好（showToday/defaultRange）+ 偏好路由
 lib/engine.js    聚合引擎（指纹持久缓存 + 后台渐进扫描 + 队列合并 + 删会话清理）
 lib/fsindex.js   会话日志文件索引/指纹/seed 跳过（纯 node:fs，可单测）
 lib/fold.js      会话日志折叠抽取（usage 终值覆盖采样、seed 跳过、路由半更新）
-lib/http.js      同源 JSON 路由（no-store）
+lib/http.js      同源 JSON 路由（GET /ext/dshp-inx-token-stats/data，no-store）
 client.js        Client 半：__ModuleLoader__ bundle，设置页 + 侧边栏今日入口
-                 （聚合 useMemo 缓存；footer 菜单垂直布局兼容 Cordis 徽章共存）
-cordis.patch.yml bundle 层 patch：仅 insert 挂载行
+cordis.patch.yml bundle 层 patch：仅 insert 挂载行（id: dshp-inx-token-stats）
 test/            单元测试（npm test：fold 抽取 ×7 + fsindex ×4 + async ×4）
+images/          效果预览截图（README 引用）
 ```
 
 ## 免责声明
