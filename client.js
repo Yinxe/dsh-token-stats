@@ -284,6 +284,8 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 .ts-pop,.ts-tipfixed{animation:ts-pop .13s ease-out}
 .ts-gridln,.ts-axislbl{animation:ts-fade .5s ease backwards}
 .ts-barfill,.ts-streakfill,.ts-pop-fill,.ts-compose span{transform-origin:left center;animation:ts-groww .55s cubic-bezier(.22,.8,.36,1) backwards}
+/* 条宽只在入场生长一次：增量更新直接落值，不再滑动重播（transition 会随值变化重播） */
+.ts-barfill{transition:none}
 .ts-compose span{animation-delay:.1s}
 .ts-streakfill{animation-delay:.12s}
 .ts-pop-fill{animation-delay:.06s}
@@ -311,13 +313,19 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
     //#endregion
     //#region ui ─────────────────────────────────────────────────────────
 
-    /** 数字滚动动画：首次从 0 滚到目标，之后每次数值变化从旧值平滑过渡（ease-out cubic）。 */
+    /** 数字滚动动画：只在首次挂载播一次（从 0 滚到目标）；后续增量更新直接落值，不再重播。 */
     function AnimatedNumber(props) {
       const [disp, setDisp] = React.useState(0)
       const ref = React.useRef(0)
+      const played = React.useRef(false)
       React.useEffect(() => {
-        const from = ref.current
         const to = Number(props.value) || 0
+        if (played.current) {
+          if (ref.current !== to) { ref.current = to; setDisp(to) }
+          return undefined
+        }
+        played.current = true
+        const from = ref.current
         if (from === to) return undefined
         const dur = props.duration || 650
         const t0 = performance.now()
