@@ -247,10 +247,79 @@ window.__ModuleLoader__.load({
 .ts-switch[aria-checked="true"]{background:var(--dsw-alias-state-business-primary);border-color:transparent}
 .ts-switch .ts-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--dsw-alias-label-primary-foreground);transition:left .18s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 .ts-switch[aria-checked="true"] .ts-knob{left:19px}
+
+/* ── 动画与过渡增强（置于 CSS 末尾：覆盖同特异性前序声明）────────── */
+.ts-card{transition:border-color .2s,transform .2s;animation:ts-fadeup .42s ease backwards}
+.ts-card:hover{border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 45%,var(--dsw-alias-border-l1));transform:translateY(-1px)}
+.ts-stat{transition:border-color .18s,transform .18s,box-shadow .18s;animation:ts-fadeup .42s ease backwards}
+.ts-stat:hover{border-color:var(--dsw-alias-state-business-primary);transform:translateY(-1.5px);box-shadow:0 3px 12px -4px rgba(0,0,0,.18)}
+.ts-stat[data-tint="1"] .ts-stat-value{background:linear-gradient(100deg,var(--dsw-alias-state-business-primary),color-mix(in srgb,var(--dsw-alias-state-business-primary) 52%,#34d399));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ts-btn{transition:background .15s,border-color .15s}
+.ts-btn:hover:not(:disabled){border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 55%,var(--dsw-alias-border-l2))}
+.ts-select{transition:border-color .15s}
+.ts-select:focus{border-color:var(--dsw-alias-state-business-primary)}
+.ts-seg-btn{transition:color .15s,background .15s}
+.ts-seg-on{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-state-business-primary) 40%,transparent)}
+.ts-modelchip{transition:border-color .15s,transform .15s,opacity .2s}
+.ts-modelchip:hover{transform:translateY(-1px)}
+.ts-model{transition:background .15s}
+.ts-modelval{transition:color .15s}
+.ts-today{transition:border-color .18s}
+.ts-pop,.ts-tipfixed{animation:ts-pop .13s ease-out}
+.ts-gridln,.ts-axislbl{animation:ts-fade .5s ease backwards}
+.ts-barfill,.ts-streakfill,.ts-pop-fill,.ts-compose span{transform-origin:left center;animation:ts-groww .55s cubic-bezier(.22,.8,.36,1) backwards}
+.ts-compose span{animation-delay:.1s}
+.ts-streakfill{animation-delay:.12s}
+.ts-pop-fill{animation-delay:.06s}
+.ts-dayscroll span{animation:ts-fade .4s ease backwards}
+.ts-draw{stroke-dasharray:20000;stroke-dashoffset:20000;animation:ts-draw 1.05s cubic-bezier(.4,0,.2,1) backwards}
+.ts-fadein{animation:ts-fade .45s ease backwards}
+.ts-rise{transform-box:fill-box;transform-origin:bottom center;animation:ts-risev .5s cubic-bezier(.22,.8,.36,1) backwards}
+.ts-hcell[data-lv]:not([data-lv="0"]){animation:ts-heatin .5s cubic-bezier(.2,.8,.3,1.2) backwards}
+.ts-donutseg{animation:ts-donutseg .85s cubic-bezier(.3,.6,.3,1) backwards}
+.ts-donut-c{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:110px;text-align:center;font-size:16px;font-weight:600;color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums;line-height:20px;pointer-events:none}
+.ts-donut-cap{position:absolute;left:50%;top:calc(46% + 18px);transform:translateX(-50%);width:110px;text-align:center;font-size:11px;color:var(--dsw-alias-label-caption);pointer-events:none}
+.ts-spin{display:inline-block;animation:ts-rot 1s linear infinite}
+@keyframes ts-fadeup{from{opacity:0;transform:translateY(6px)}}
+@keyframes ts-fade{from{opacity:0}}
+@keyframes ts-draw{to{stroke-dashoffset:0}}
+@keyframes ts-groww{from{transform:scaleX(0)}}
+@keyframes ts-risev{from{transform:scaleY(0)}}
+@keyframes ts-heatin{from{opacity:0;transform:scale(.4)}}
+@keyframes ts-donutseg{from{stroke-dashoffset:0}}
+@keyframes ts-rot{to{transform:rotate(360deg)}}
+@keyframes ts-pop{from{opacity:0;transform:scale(.96)}}
+@media (prefers-reduced-motion:reduce){.ts-page *,.ts-today *,.ts-pop,.ts-tipfixed{animation:none!important;transition:none!important}}
 `
 
     //#endregion
     //#region ui ─────────────────────────────────────────────────────────
+
+    /** 数字滚动动画：首次从 0 滚到目标，之后每次数值变化从旧值平滑过渡（ease-out cubic）。 */
+    function AnimatedNumber(props) {
+      const [disp, setDisp] = React.useState(0)
+      const ref = React.useRef(0)
+      React.useEffect(() => {
+        const from = ref.current
+        const to = Number(props.value) || 0
+        if (from === to) return undefined
+        const dur = props.duration || 650
+        const t0 = performance.now()
+        let raf = 0
+        const step = (t) => {
+          const p = Math.min(1, (t - t0) / dur)
+          const e = 1 - Math.pow(1 - p, 3)
+          const v = from + (to - from) * e
+          ref.current = v
+          setDisp(v)
+          if (p < 1) raf = requestAnimationFrame(step)
+        }
+        raf = requestAnimationFrame(step)
+        return () => cancelAnimationFrame(raf)
+      }, [props.value])
+      const format = props.format || ((v) => Math.round(v).toLocaleString('en-US'))
+      return el('div', { className: props.className || '', style: props.style || undefined }, format(disp))
+    }
 
     function Seg(props) {
       return el('div', { className: 'ts-seg' }, props.options.map((o) =>
@@ -260,16 +329,21 @@ window.__ModuleLoader__.load({
         }, o.t)))
     }
 
-    /** 指标卡：visual = 额外可视化 children。 */
+    /** 指标卡：visual = 额外可视化 children；count = 数字滚动（tint = 渐变强调）。 */
     function StatCard(props) {
+      const valueNode = props.count !== undefined
+        ? el(AnimatedNumber, { className: 'ts-stat-value', value: props.count, format: props.fmt || fmt })
+        : el('div', { className: 'ts-stat-value' }, props.value)
       return el('div', {
         className: 'ts-stat',
+        'data-tint': props.tint ? '1' : '0',
+        style: props.delay !== undefined ? { animationDelay: props.delay + 'ms' } : undefined,
         onMouseEnter: props.onHover || undefined,
         onMouseMove: props.onHover || undefined,
         onMouseLeave: props.onLeave || undefined
       },
         el('div', { className: 'ts-stat-label' }, props.label),
-        el('div', { className: 'ts-stat-value' }, props.value),
+        valueNode,
         props.sub ? el('div', { className: 'ts-stat-sub' }, props.sub) : null,
         ...(props.visual || []))
     }
@@ -311,9 +385,9 @@ window.__ModuleLoader__.load({
       const area = line + ' L ' + xs(vals.length - 1).toFixed(1) + ' ' + (H - PAD) + ' L ' + xs(0).toFixed(1) + ' ' + (H - PAD) + ' Z'
       const c = props.color || BP
       return el('svg', { className: 'ts-spark', viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none' },
-        el('path', { d: area, style: { fill: c, fillOpacity: 0.13 } }),
-        el('path', { d: line, fill: 'none', style: { stroke: c, strokeWidth: 1.5, strokeLinecap: 'round' } }),
-        el('circle', { cx: xs(vals.length - 1), cy: ys(vals[vals.length - 1]), r: 1.8, style: { fill: c } }))
+        el('path', { d: area, className: 'ts-fadein', style: { fill: c, fillOpacity: 0.13, animationDelay: '.18s' } }),
+        el('path', { d: line, className: 'ts-draw', fill: 'none', style: { stroke: c, strokeWidth: 1.5, strokeLinecap: 'round', animationDelay: '.12s' } }),
+        el('circle', { cx: xs(vals.length - 1), cy: ys(vals[vals.length - 1]), r: 1.8, className: 'ts-fadein', style: { fill: c, animationDelay: '.55s' } }))
     }
 
     /** 涨跌指示（近 7 天 vs 前 7 天）。 */
@@ -325,7 +399,7 @@ window.__ModuleLoader__.load({
       if (delta === null) { arrow = 'up'; text = '新增' }
       else if (delta > 2) { arrow = 'up'; color = 'var(--dsw-alias-state-success-primary)'; text = '+' + delta.toFixed(0) + '%' }
       else if (delta < -2) { arrow = 'down'; color = 'var(--dsw-alias-state-error-primary)'; text = delta.toFixed(0) + '%' }
-      return el('div', { className: 'ts-statgrow', style: { color } },
+      return el('div', { className: 'ts-statgrow ts-fadein', style: { color } },
         el('span', { className: 'ts-arrow ts-arrow-' + arrow }),
         el('span', null, text + '（对比前 7 天）'))
     }
@@ -354,7 +428,7 @@ window.__ModuleLoader__.load({
       return el('div', { className: 'ts-dayscroll', title: '活跃日分布（按月分桶）' },
         buckets.map((b, i) => {
           const ratio = b.total > 0 ? b.active / b.total : 0
-          return el('span', { key: i, style: { background: BP, opacity: ratio === 0 ? 0.08 : (0.15 + ratio * 0.8) } })
+          return el('span', { key: i, style: { background: BP, opacity: ratio === 0 ? 0.08 : (0.15 + ratio * 0.8), animationDelay: (i * 26) + 'ms' } })
         }))
     }
 
@@ -364,8 +438,8 @@ window.__ModuleLoader__.load({
       const max = Math.max(a, b) || 1
       const H = height || 14
       return el('div', { style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3, height: H + 2, marginTop: 3 } },
-        el('span', { title: props.aTitle || '今日', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, display: 'block', height: Math.max(2, a / max * H).toFixed(1) + 'px' } }),
-        el('span', { title: props.bTitle || '昨日', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, opacity: .28, display: 'block', height: Math.max(2, b / max * H).toFixed(1) + 'px' } }))
+        el('span', { title: props.aTitle || '今日', className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, display: 'block', height: Math.max(2, a / max * H).toFixed(1) + 'px', animationDelay: '60ms' } }),
+        el('span', { title: props.bTitle || '昨日', className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, opacity: .28, display: 'block', height: Math.max(2, b / max * H).toFixed(1) + 'px', animationDelay: '150ms' } }))
     }
 
     /** 可视化数值行：fmt 数字 + 迷你条（悬浮卡里替代纯数字）。 */
@@ -421,12 +495,14 @@ window.__ModuleLoader__.load({
           kids.push(el('circle', { key: 'd' + s.name, cx: xs(hover.i), cy: ys(s.values[hover.i]), r: 3.5, style: { fill: s.color, stroke: 'var(--dsw-alias-bg-layer-1)', strokeWidth: 1.5 } }))
         }
       }
+      let li = 0
       for (const s of seriesList) {
         if (!s.visible) continue
         kids.push(el('path', {
-          key: 'ln' + s.name, d: smoothPath(s.values.map((v, i) => [xs(i), ys(v)])), fill: 'none',
-          style: { stroke: s.color, strokeWidth: s.isTotal ? 2.6 : 1.9, strokeLinecap: 'round', strokeLinejoin: 'round', opacity: s.isTotal ? 1 : .92 }
+          key: 'ln' + s.name, className: 'ts-draw', d: smoothPath(s.values.map((v, i) => [xs(i), ys(v)])), fill: 'none',
+          style: { stroke: s.color, strokeWidth: s.isTotal ? 2.6 : 1.9, strokeLinecap: 'round', strokeLinejoin: 'round', opacity: s.isTotal ? 1 : .92, animationDelay: (0.15 + li * 0.09) + 's' }
         }))
+        li++
       }
       kids.push(el('rect', { key: 'cap', x: 0, y: 0, width: W, height: H, fill: 'transparent', style: { cursor: 'crosshair' }, onMouseMove: onMove, onMouseLeave: () => setHover(null) }))
 
@@ -473,8 +549,8 @@ window.__ModuleLoader__.load({
         const hgt = (v / top) * (H - pb - pt)
         kids.push(el('rect', {
           key: 'b' + hIdx, x: pl + hIdx * bw + bw * 0.15, y: (H - pb) - hgt, width: bw * 0.7,
-          height: Math.max(hgt, v > 0 ? 2 : 0), rx: 2,
-          style: { fill: BP, fillOpacity: hover !== null && hover.h === hIdx ? 1 : 0.72 },
+          height: Math.max(hgt, v > 0 ? 2 : 0), rx: 2, className: 'ts-rise',
+          style: { fill: BP, fillOpacity: hover !== null && hover.h === hIdx ? 1 : 0.72, animationDelay: (hIdx * 22) + 'ms' },
           onMouseEnter: (e) => setHover({ h: hIdx, mx: e.clientX, my: e.clientY }),
           onMouseMove: (e) => setHover({ h: hIdx, mx: e.clientX, my: e.clientY }),
           onMouseLeave: () => setHover(null)
@@ -550,7 +626,7 @@ window.__ModuleLoader__.load({
             className: 'ts-hcell',
             'data-lv': (cell === null || cell.v <= 0) ? '0' : String(levelOf(cell.v)),
             style: (cell === null) ? { visibility: 'hidden' }
-              : (cell.v > 0 ? { background: BP, opacity: OPS[levelOf(cell.v)] } : undefined),
+              : (cell.v > 0 ? { background: BP, opacity: OPS[levelOf(cell.v)], animationDelay: ((w * 45) % 480) + 'ms' } : undefined),
             onMouseEnter: cell ? (e) => onCell(cell, e) : undefined,
             onMouseMove: cell ? (e) => onCell(cell, e) : undefined,
             onMouseLeave: () => setHover(null)
@@ -612,17 +688,19 @@ window.__ModuleLoader__.load({
         const it = entries[i]
         const len = total > 0 ? (it.t / total) * C : 0
         kids.push(el('circle', {
-          key: 's' + i, cx, cy, r, fill: 'none',
+          key: 's' + i, cx, cy, r, fill: 'none', className: 'ts-donutseg',
           strokeDasharray: len.toFixed(2) + ' ' + (C - len).toFixed(2),
           strokeDashoffset: (-acc).toFixed(2),
-          style: { stroke: it.color, strokeWidth: 18 },
+          style: { stroke: it.color, strokeWidth: 18, animationDelay: (i * 70) + 'ms' },
           transform: 'rotate(-90 ' + cx + ' ' + cy + ')'
         }, el('title', null, it.name + ' · ' + fmt(it.t))))
         acc += len
       }
-      kids.push(el('text', { key: 'c1', x: cx, y: cy - 2, textAnchor: 'middle', style: { fill: 'var(--dsw-alias-label-primary)', fontSize: 16, fontWeight: 600 } }, fmt(total)))
-      kids.push(el('text', { key: 'c2', x: cx, y: cy + 16, textAnchor: 'middle', style: { fill: 'var(--dsw-alias-label-caption)', fontSize: 11 } }, '累计 Token'))
-      return el('svg', { viewBox: '0 0 ' + size + ' ' + size, style: { width: size, height: size, flex: 'none' } }, kids)
+      // 中心数字移出 SVG（滚动动画由 AnimatedNumber 驱动），包装一层相对容器
+      return el('div', { style: { position: 'relative', width: size, height: size, flex: 'none' } },
+        el('svg', { viewBox: '0 0 ' + size + ' ' + size, style: { width: size, height: size, display: 'block' } }, kids),
+        el(AnimatedNumber, { className: 'ts-donut-c', value: total, format: fmt }),
+        el('div', { className: 'ts-donut-cap' }, '累计 Token'))
     }
 
     /** 侧栏今日迷你多模型曲线：分色 + 十字 + fixed 悬浮（不裁剪）。 */
@@ -644,10 +722,11 @@ window.__ModuleLoader__.load({
       if (hover !== null) {
         kids.push(el('line', { key: 'ch', x1: xs(hover.i), x2: xs(hover.i), y1: PAD, y2: H - PAD, style: { stroke: BP, strokeWidth: 1, strokeDasharray: '2 2', opacity: .7 } }))
       }
-      for (const s of seriesList) {
-        kids.push(el('path', { key: 'l' + s.name, d: smoothPath(s.values.map((v, i) => [xs(i), ys(v)])), fill: 'none',
-          style: { stroke: s.color, strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round', opacity: .9 } }))
-        kids.push(el('circle', { key: 'e' + s.name, cx: xs(n - 1), cy: ys(s.values[n - 1] || 0), r: 1.8, style: { fill: s.color } }))
+      for (let si = 0; si < seriesList.length; si++) {
+        const s = seriesList[si]
+        kids.push(el('path', { key: 'l' + s.name, className: 'ts-draw', d: smoothPath(s.values.map((v, i) => [xs(i), ys(v)])), fill: 'none',
+          style: { stroke: s.color, strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round', opacity: .9, animationDelay: (0.1 + si * 0.12) + 's' } }))
+        kids.push(el('circle', { key: 'e' + s.name, cx: xs(n - 1), cy: ys(s.values[n - 1] || 0), r: 1.8, className: 'ts-fadein', style: { fill: s.color, animationDelay: (0.55 + si * 0.12) + 's' } }))
         if (hover !== null) {
           kids.push(el('circle', { key: 'h' + s.name, cx: xs(hover.i), cy: ys(s.values[hover.i] || 0), r: 2.2, style: { fill: s.color, stroke: 'var(--dsw-alias-bg-layer-1)', strokeWidth: 1 } }))
         }
@@ -760,7 +839,9 @@ window.__ModuleLoader__.load({
             RANGES.map((o) => el('option', { key: o.v, value: o.v }, o.t))),
           el('span', { className: 'ts-hint', style: { marginLeft: 'auto' } },
             '更新于 ' + hhmm(data.generatedAt) + (loading ? ' · 刷新中…' : '')),
-          el('button', { className: 'ts-btn', onClick: refresh, disabled: loading }, '↻ 刷新')))
+          el('button', { className: 'ts-btn', onClick: refresh, disabled: loading },
+            el('span', { className: loading ? 'ts-spin' : '' }, '↻'),
+            loading ? ' 刷新中…' : ' 刷新')))
 
         if (data.partial === true) {
           const pct = data.total > 0 ? Math.round((data.scanned / data.total) * 100) : 0
@@ -793,7 +874,7 @@ window.__ModuleLoader__.load({
 
         const cards = []
         cards.push(el(StatCard, {
-          label: '累计 Token', value: fmt(aggAll.total), sub: '输入 ' + fmt(aggAll.i) + ' · 输出 ' + fmt(aggAll.o),
+          label: '累计 Token', count: aggAll.total, tint: true, sub: '输入 ' + fmt(aggAll.i) + ' · 输出 ' + fmt(aggAll.o), delay: cards.length * 45,
           onHover: (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: breakdown('累计构成', [
             ['输入', aggAll.i, 1, aggAll.total], ['输出', aggAll.o, 1, aggAll.total],
             ['缓存读', aggAll.cr, 1, aggAll.total], ['缓存写', aggAll.cw, 1, aggAll.total]
@@ -804,22 +885,22 @@ window.__ModuleLoader__.load({
           ] })]
         }))
         cards.push(el(StatCard, {
-          label: '近 30 天走势', value: fmt(sparkVals.reduce((s, v) => s + v, 0)), sub: '每日用量迷你图',
+          label: '近 30 天走势', count: sparkVals.reduce((s, v) => s + v, 0), sub: '每日用量迷你图', delay: cards.length * 45,
           visual: [el(Sparkline, { values: sparkVals }),
             el(TrendDelta, { recent: last7, before: prev7 })]
         }))
         cards.push(el(StatCard, {
-          label: '缓存 Token', value: fmt(aggAll.cr + aggAll.cw), sub: '命中 ' + fmt(aggAll.cr) + ' · 写入 ' + fmt(aggAll.cw),
+          label: '缓存 Token', count: aggAll.cr + aggAll.cw, sub: '命中 ' + fmt(aggAll.cr) + ' · 写入 ' + fmt(aggAll.cw), delay: cards.length * 45,
           onHover: (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: breakdown('缓存构成 · 命中率 ' + (aggAll.total > 0 ? (aggAll.cr / aggAll.total * 100).toFixed(1) : '0.0') + '%', [
             ['缓存读（命中）', aggAll.cr, 1, aggAll.total], ['缓存写', aggAll.cw, 1, aggAll.total]
           ]) }), onLeave: leaveStat,
           visual: [el(ComposeBar, { parts: [['缓存读', aggAll.cr, CC], ['缓存写', aggAll.cw, '#9a6ef1']] })]
         }))
         if (data.peakStep) cards.push(el(StatCard, {
-          label: '峰值单次请求', value: fmt(data.peakStep.tokens), sub: data.peakStep.model + ' · ' + dispDay(data.peakStep.d)
+          label: '峰值单次请求', count: data.peakStep.tokens, sub: data.peakStep.model + ' · ' + dispDay(data.peakStep.d), delay: cards.length * 45
         }))
         if (peakDay) cards.push(el(StatCard, {
-          label: '峰值单日', value: fmt(peakDay.t), sub: dispDay(peakDay.d),
+          label: '峰值单日', count: peakDay.t, sub: dispDay(peakDay.d), delay: cards.length * 45,
           onHover: (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: breakdown(peakDay.d + ' 各模型', Object.entries(peakDay.byModel || {}).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([mk, v]) => {
             const info = data.models[mk]
             return [info ? info.model : mk, v, 1, peakDay.t]
@@ -829,16 +910,16 @@ window.__ModuleLoader__.load({
             return [info ? info.model : mk, v, modelColor(mk)]
           }) })]
         }))
-        cards.push(el(StatCard, { label: '日均消耗', value: fmt(avgDay), sub: '按活跃日平均',
+        cards.push(el(StatCard, { label: '日均消耗', count: avgDay, sub: '按活跃日平均', delay: cards.length * 45,
           visual: [el(Sparkline, { values: sparkVals, color: CO })] }))
-        cards.push(el(StatCard, { label: '日消耗中位数', value: fmt(medDay), sub: '按活跃日取中位' }))
-        cards.push(el(StatCard, { label: '当前连续使用', value: st.current + ' 天', sub: '按自然日统计',
+        cards.push(el(StatCard, { label: '日消耗中位数', count: medDay, sub: '按活跃日取中位', delay: cards.length * 45 }))
+        cards.push(el(StatCard, { label: '当前连续使用', count: st.current, fmt: (v) => fmt(v) + ' 天', sub: '按自然日统计', delay: cards.length * 45,
           visual: [el(StreakBar, { current: st.current, best: st.longest })] }))
-        cards.push(el(StatCard, { label: '最长连续使用', value: st.longest + ' 天', sub: '历史最佳纪录',
+        cards.push(el(StatCard, { label: '最长连续使用', count: st.longest, fmt: (v) => fmt(v) + ' 天', sub: '历史最佳纪录', delay: cards.length * 45,
           visual: [el(StreakBar, { current: st.current, best: st.longest })] }))
-        cards.push(el(StatCard, { label: '活跃天数', value: aggAll.byDay.size + ' 天', sub: '共 ' + data.sessions + ' 个会话',
+        cards.push(el(StatCard, { label: '活跃天数', count: aggAll.byDay.size, fmt: (v) => fmt(v) + ' 天', sub: '共 ' + data.sessions + ' 个会话', delay: cards.length * 45,
           visual: [el(DaysRibbon, { byDay: aggAll.byDay })] }))
-        cards.push(el(StatCard, { label: '模型调用次数', value: fmt(aggAll.n), sub: data.active + ' 个会话有用量' }))
+        cards.push(el(StatCard, { label: '模型调用次数', count: aggAll.n, sub: data.active + ' 个会话有用量', delay: cards.length * 45 }))
         cards.push(el(StatCard, { label: '首次使用', value: dispDay(aggAll.first), sub: aggAll.first }))
         cards.push(el(StatCard, { label: '最近使用', value: dispDay(aggAll.last), sub: aggAll.last }))
         children.push(el('div', { className: 'ts-grid' }, cards))
@@ -898,20 +979,20 @@ window.__ModuleLoader__.load({
                 el('span', { className: 'ts-mc-name' }, s.shortName))),
             el('span', { className: 'ts-hint', style: { marginLeft: 6 } }, '默认隐藏总曲线')),
           anyVisible
-            ? el(TrendChart, { series: trendSeries, labels })
+            ? el(TrendChart, { key: range + '-' + win, series: trendSeries, labels })
             : el('div', { className: 'ts-empty' }, '全部曲线已隐藏 —— 点击上方标签恢复')))
 
         // ── 时段分布（悬浮全可视化）────────────────────────────
         children.push(el('div', { className: 'ts-card' },
           el('div', { className: 'ts-chart-title' }, '时段分布（' + rangeText(range) + '，按小时 · 悬浮查看明细）'),
-          el(HourHist, { byHour: sc.byHour })))
+          el(HourHist, { key: range, byHour: sc.byHour })))
 
         // ── 热力图（1/3/6/12 月 + 当日明细悬浮）───────────────
         const HEAT_OPS = [0.16, 0.3, 0.5, 0.72, 0.95]
         children.push(el('div', { className: 'ts-card' },
           el('div', { className: 'ts-chart-title' }, 'Token 活动热力图（悬浮查看当日明细）',
             el(Seg, { options: [{ v: '1', t: '1个月' }, { v: '3', t: '3个月' }, { v: '6', t: '6个月' }, { v: '12', t: '12个月' }], current: heatSpan, onPick: setHeatSpan })),
-          el(Heatmap, { byDay: aggAll.byDay, daySessions: data.daySessions || {}, models: data.models, months: Number(heatSpan) }),
+          el(Heatmap, { key: heatSpan, byDay: aggAll.byDay, daySessions: data.daySessions || {}, models: data.models, months: Number(heatSpan) }),
           el('div', { className: 'ts-legend' },
             el('span', { className: 'ts-muted' }, '少'),
             HEAT_OPS.map((o, i) => el('span', { key: i, className: 'ts-cell', style: { background: BP, opacity: o } })),
@@ -927,7 +1008,7 @@ window.__ModuleLoader__.load({
           if (rest.length > 0) {
             donutEntries.push({ name: '其他', t: rest.reduce((s, m) => s + m.t, 0), color: '#8a94a6' })
           }
-          const modelRows = arr.map((m) => {
+          const modelRows = arr.map((m, i) => {
             const info = (data.models && data.models[m.m]) || null
             const name = info ? info.model : m.m
             const color = modelColor(m.m)
@@ -945,7 +1026,7 @@ window.__ModuleLoader__.load({
                   el('span', { className: 'ts-modelname', title: m.m }, name),
                   el('span', { className: 'ts-modelval' }, fmt(m.t) + ' · ' + pct.toFixed(1) + '%')),
                 el('div', { className: 'ts-bartrack' },
-                  el('span', { className: 'ts-barfill', style: { width: (m.t / arr[0].t * 100).toFixed(1) + '%', background: color } })),
+                  el('span', { className: 'ts-barfill', style: { width: (m.t / arr[0].t * 100).toFixed(1) + '%', background: color, animationDelay: (i * 40 + 120) + 'ms' } })),
                 el('div', { className: 'ts-muted', style: { fontSize: 11, marginTop: 2 } },
                   (info && info.provider ? info.provider + ' · ' : '') + '输入 ' + fmt(m.i) + ' · 输出 ' + fmt(m.o) + ' · 缓存 ' + fmt(m.cr + m.cw) + ' · ' + fmtFull(m.n) + ' 次')))
           })
@@ -1000,7 +1081,7 @@ window.__ModuleLoader__.load({
         if (!wide) {
           return el('div', { className: 'ts-today ts-todayRail', title: '今日 ' + fmtFull(todayTotal) + ' tokens · 昨日 ' + fmtFull(yTotal) },
             el('div', { className: 'ts-todaylabel' }, '今日'),
-            el('div', { className: 'ts-todayval' }, fmt(todayTotal)),
+            el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmt }),
             el(DualBars, { a: todayTotal, b: yTotal }))
         }
 
@@ -1023,17 +1104,17 @@ window.__ModuleLoader__.load({
         return el('div', { className: 'ts-today', title: '今日 Token 用量 · ' + modelHourSeries.length + ' 个模型' },
           el('div', { className: 'ts-todayhead' },
             el('span', { className: 'ts-todaylabel' }, '今日 Token'),
-            el('span', { className: 'ts-todayval' }, fmt(todayTotal))),
+            el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmt })),
           el(TodayChart, { series: modelHourSeries, n: nowHour + 1 }),
           modelHourSeries.length > 0
             ? el('div', { className: 'ts-todaymodels' },
-                modelHourSeries.map((s) =>
-                  el('span', { key: s.name, className: 'ts-todaymchip', title: s.shortName + ' · ' + fmtFull(s.values.reduce((a, b) => a + b, 0)) },
+                modelHourSeries.map((s, si) =>
+                  el('span', { key: s.name, className: 'ts-todaymchip ts-fadein', style: { animationDelay: (si * 60) + 'ms' }, title: s.shortName + ' · ' + fmtFull(s.values.reduce((a, b) => a + b, 0)) },
                     el('span', { className: 'ts-dot', style: { background: s.color } }),
                     el('span', null, s.shortName))))
             : null,
           delta !== null
-            ? el('div', { className: 'ts-statgrow', style: { marginTop: 4, color: delta >= 0 ? 'var(--dsw-alias-state-success-primary)' : 'var(--dsw-alias-state-error-primary)', fontSize: 10.5 } },
+            ? el('div', { className: 'ts-statgrow ts-fadein', style: { marginTop: 4, color: delta >= 0 ? 'var(--dsw-alias-state-success-primary)' : 'var(--dsw-alias-state-error-primary)', fontSize: 10.5 } },
                 el('span', { className: 'ts-arrow ' + (delta >= 0 ? 'ts-arrow-up' : 'ts-arrow-down') }),
                 el('span', null, (delta >= 0 ? '+' : '') + delta.toFixed(0) + '% vs 昨日'))
             : el('div', { className: 'ts-muted', style: { fontSize: 10, marginTop: 4 } }, todayTotal > 0 ? '昨日无消耗' : '开始使用后统计'))
