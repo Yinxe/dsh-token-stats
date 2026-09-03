@@ -272,7 +272,7 @@ window.__ModuleLoader__.load({
 .ts-streakfill{animation-delay:.12s}
 .ts-pop-fill{animation-delay:.06s}
 .ts-dayscroll span{animation:ts-fade .4s ease backwards}
-.ts-draw{stroke-dasharray:20000;stroke-dashoffset:20000;animation:ts-draw 1.05s cubic-bezier(.4,0,.2,1) backwards}
+.ts-draw{stroke-dasharray:20000;animation:ts-draw 1.05s cubic-bezier(.4,0,.2,1) backwards}
 .ts-fadein{animation:ts-fade .45s ease backwards}
 .ts-rise{transform-box:fill-box;transform-origin:bottom center;animation:ts-risev .5s cubic-bezier(.22,.8,.36,1) backwards}
 .ts-hcell[data-lv]:not([data-lv="0"]){animation:ts-heatin .5s cubic-bezier(.2,.8,.3,1.2) backwards}
@@ -282,7 +282,7 @@ window.__ModuleLoader__.load({
 .ts-spin{display:inline-block;animation:ts-rot 1s linear infinite}
 @keyframes ts-fadeup{from{opacity:0;transform:translateY(6px)}}
 @keyframes ts-fade{from{opacity:0}}
-@keyframes ts-draw{to{stroke-dashoffset:0}}
+@keyframes ts-draw{from{stroke-dashoffset:20000}to{stroke-dashoffset:0}}
 @keyframes ts-groww{from{transform:scaleX(0)}}
 @keyframes ts-risev{from{transform:scaleY(0)}}
 @keyframes ts-heatin{from{opacity:0;transform:scale(.4)}}
