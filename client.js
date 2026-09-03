@@ -263,10 +263,12 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 .ts-switch[aria-checked="true"] .ts-knob{left:19px}
 
 /* ── 动画与过渡增强（置于 CSS 末尾：覆盖同特异性前序声明）────────── */
-.ts-card{transition:border-color .2s,transform .2s;animation:ts-fadeup .42s ease backwards}
-.ts-card:hover{border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 45%,var(--dsw-alias-border-l1));transform:translateY(-1px)}
-.ts-stat{transition:border-color .18s,transform .18s,box-shadow .18s;animation:ts-fadeup .42s ease backwards}
-.ts-stat:hover{border-color:var(--dsw-alias-state-business-primary);transform:translateY(-1.5px);box-shadow:0 3px 12px -4px rgba(0,0,0,.18)}
+/* 注意：悬浮层用 position:fixed 跟随鼠标，祖先的 transform/filter 会劫持其定位基准
+   （悬浮直接飞出屏幕、看起来像没生效）——卡片悬停浮起一律用 top，禁用 transform */
+.ts-card{position:relative;transition:border-color .2s,top .2s;animation:ts-fadeup .42s ease backwards}
+.ts-card:hover{border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 45%,var(--dsw-alias-border-l1));top:-1px}
+.ts-stat{position:relative;transition:border-color .18s,top .18s,box-shadow .18s;animation:ts-fadeup .42s ease backwards}
+.ts-stat:hover{border-color:var(--dsw-alias-state-business-primary);top:-1.5px;box-shadow:0 3px 12px -4px rgba(0,0,0,.18)}
 .ts-stat[data-tint="1"] .ts-stat-value{background:linear-gradient(100deg,var(--dsw-alias-state-business-primary),color-mix(in srgb,var(--dsw-alias-state-business-primary) 52%,#34d399));-webkit-background-clip:text;background-clip:text;color:transparent}
 .ts-btn{transition:background .15s,border-color .15s}
 .ts-btn:hover:not(:disabled){border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 55%,var(--dsw-alias-border-l2))}
@@ -274,8 +276,8 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 .ts-select:focus{border-color:var(--dsw-alias-state-business-primary)}
 .ts-seg-btn{transition:color .15s,background .15s}
 .ts-seg-on{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-state-business-primary) 40%,transparent)}
-.ts-modelchip{transition:border-color .15s,transform .15s,opacity .2s}
-.ts-modelchip:hover{transform:translateY(-1px)}
+.ts-modelchip{position:relative;transition:border-color .15s,top .15s,opacity .2s}
+.ts-modelchip:hover{top:-1px}
 .ts-model{transition:background .15s}
 .ts-modelval{transition:color .15s}
 .ts-today{transition:border-color .18s}
@@ -380,10 +382,10 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
       return el('div', null,
         el('div', { className: 'ts-compose' }, parts.filter((p) => p[1] > 0).map((p) => {
           const w = p[1] / total * 100
-          return el('span', { key: p[0], style: { width: w.toFixed(2) + '%', background: p[2] }, title: p[0] + ' ' + fmtFull(p[1]) + ' · ' + w.toFixed(1) + '%' })
+          return el('span', { key: p[0], style: { width: w.toFixed(2) + '%', background: p[2] } })
         })),
         el('div', { className: 'ts-compose-legend' },
-          parts.map((p) => el('span', { key: p[0], title: fmtFull(p[1]) },
+          parts.map((p) => el('span', { key: p[0] },
             el('i', { style: { background: p[2] } }), p[0]))))
     }
 
@@ -440,7 +442,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         buckets[b].total++
         if (byDay.has(keyOf(m))) buckets[b].active++
       }
-      return el('div', { className: 'ts-dayscroll', title: '活跃日分布（按月分桶）' },
+      return el('div', { className: 'ts-dayscroll' },
         buckets.map((b, i) => {
           const ratio = b.total > 0 ? b.active / b.total : 0
           return el('span', { key: i, style: { background: BP, opacity: ratio === 0 ? 0.08 : (0.15 + ratio * 0.8), animationDelay: (i * 26) + 'ms' } })
@@ -453,8 +455,8 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
       const max = Math.max(a, b) || 1
       const H = height || 14
       return el('div', { className: props.className || '', style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3, height: H + 2, marginTop: 3 } },
-        el('span', { title: props.aTitle || '今日', className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, display: 'block', height: Math.max(2, a / max * H).toFixed(1) + 'px', animationDelay: '60ms' } }),
-        el('span', { title: props.bTitle || '昨日', className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, opacity: .28, display: 'block', height: Math.max(2, b / max * H).toFixed(1) + 'px', animationDelay: '150ms' } }))
+        el('span', { className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, display: 'block', height: Math.max(2, a / max * H).toFixed(1) + 'px', animationDelay: '60ms' } }),
+        el('span', { className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, opacity: .28, display: 'block', height: Math.max(2, b / max * H).toFixed(1) + 'px', animationDelay: '150ms' } }))
     }
 
     /** 可视化数值行：fmt 数字 + 迷你条（悬浮卡里替代纯数字）。 */
@@ -583,10 +585,11 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
               el('div', { className: 'ts-tiprow', style: { fontWeight: 600 } },
                 el('span', { className: 'ts-tip-k' }, hIdx + ':00–' + (hIdx + 1) + ':00'),
                 el('span', { className: 'ts-tip-v' }, v > 0 ? fmt(v) : '无用量')),
-              // 迷你柱：该小时 vs 全天峰值
+              // 迷你柱：该小时 vs 全天峰值（含义用下方绘制 caption 说明，不用原生 title）
               el('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 5, marginTop: 4, height: 26 } },
-                el('span', { title: '本小时', style: { width: 14, borderRadius: '2px 2px 0 0', background: BP, display: 'block', height: Math.max(2, v / (maxHour || 1) * 22).toFixed(1) + 'px' } }),
-                el('span', { title: '全天峰值', style: { width: 14, borderRadius: '2px 2px 0 0', background: BP, opacity: .25, display: 'block', height: 22 } })),
+                el('span', { style: { width: 14, borderRadius: '2px 2px 0 0', background: BP, display: 'block', height: Math.max(2, v / (maxHour || 1) * 22).toFixed(1) + 'px' } }),
+                el('span', { style: { width: 14, borderRadius: '2px 2px 0 0', background: BP, opacity: .25, display: 'block', height: 22 } })),
+              el('div', { style: { fontSize: 9, color: 'var(--dsw-alias-label-caption)', marginTop: 1 } }, '左：本小时　右：全天峰值'),
               el(VNum, { label: '占全天', value: v, total: totalSum }))
           })()
         : null
@@ -708,7 +711,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           strokeDashoffset: (-acc).toFixed(2),
           style: { stroke: it.color, strokeWidth: 18, animationDelay: (i * 70) + 'ms' },
           transform: 'rotate(-90 ' + cx + ' ' + cy + ')'
-        }, el('title', null, it.name + ' · ' + fmt(it.t))))
+        }))
         acc += len
       }
       // 中心数字移出 SVG（滚动动画由 AnimatedNumber 驱动），包装一层相对容器
@@ -778,7 +781,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
       return function TokenStatsSection() {
         const [data, setData] = React.useState(null)
         const [err, setErr] = React.useState(null)
-        const [loading, setLoading] = React.useState(false)
+        const [loading, setLoading] = React.useState(true)
         const [range, setRange] = React.useState('30')
         const [win, setWin] = React.useState('day')
         const [heatSpan, setHeatSpan] = React.useState('6')
@@ -787,15 +790,39 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         const [statPop, setStatPop] = React.useState(null)
         const [todayOn, setTodayOn] = React.useState(prefs ? prefs.isTodayOn() : false)
 
-        const refresh = React.useCallback(() => {
-          setLoading(true)
+        // 刷新调度状态（hooks 区统一声明，early return 之前）
+        const inflight = React.useRef(false)    // 请求进行中标记：防叠加
+        const lastSig = React.useRef(null)      // 上次已渲染载荷签名：无变化跳过
+        const spinTimer = React.useRef(0)       // 延迟转圈定时器
+        const dataRef = React.useRef(null)      // 最新 data 镜像：轮询链读它，不闭包过期值
+        dataRef.current = data
+        const stallRef = React.useRef({ scanned: -1, same: 0 })  // 停滞计数：退避用
+        const sigOf = (v) => v.scanned + '/' + v.total + '/' + v.errors + '/' + v.partial + '/' + v.records.length + '/' + v.records.reduce((s, r) => s + tok(r), 0)
+
+        const refresh = React.useCallback((force) => {
+          // 请求守卫：上一次还没回来时跳过，防叠加轰炸 host
+          if (inflight.current && force !== true) return
+          inflight.current = true
+          // 延迟转圈：400ms 内返回不闪「刷新中」
+          window.clearTimeout(spinTimer.current)
+          spinTimer.current = window.setTimeout(() => setLoading(true), 400)
           bridge.getData().then((value) => {
-            if (value && value.ready === true) { setData(value); setErr(null) }
-            else setErr((value && value.error) || '统计服务不可用')
+            window.clearTimeout(spinTimer.current)
+            inflight.current = false
             setLoading(false)
-          }).catch((error) => { setErr(String((error && error.message) || error)); setLoading(false) })
+            if (value && value.ready === true) {
+              // 签名去重：载荷无实质变化不 setData，数字/动画不再空转重播
+              const sig = sigOf(value)
+              if (sig !== lastSig.current) { lastSig.current = sig; setData(value); setErr(null) }
+            } else setErr((value && value.error) || '统计服务不可用')
+          }).catch((error) => {
+            window.clearTimeout(spinTimer.current)
+            inflight.current = false
+            setLoading(false)
+            setErr(String((error && error.message) || error))
+          })
         }, [])
-        React.useEffect(() => { refresh() }, [refresh])
+        React.useEffect(() => { refresh(true) }, [refresh])
 
         // 60s 自动刷新（页面可见时）+ 切回页面即刷
         React.useEffect(() => {
@@ -803,16 +830,33 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           const id = window.setInterval(tick, 60000)
           const onVis = () => { if (document.visibilityState === 'visible') refresh() }
           document.addEventListener('visibilitychange', onVis)
-          return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVis) }
+          return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVis); window.clearTimeout(spinTimer.current) }
         }, [refresh])
 
-        // partial 时 2s 加速轮询（渐进补全）
+        // partial 加速轮询：2s 起步；scanned 连续 8 轮无进展退避到 12s
+        //（host 侧个别会话超时重试中时不空转；60s 基线仍会补全）
         React.useEffect(() => {
-          if (data === null || data.partial !== true) return undefined
-          const id = window.setInterval(() => {
-            if (document.visibilityState === 'visible') refresh()
-          }, 2000)
-          return () => { window.clearInterval(id) }
+          if (data === null || data.partial !== true) { stallRef.current.same = 0; return undefined }
+          let alive = true
+          let timer = 0
+          const st = stallRef.current
+          if (data.scanned === st.scanned) st.same++
+          else { st.same = 0; st.scanned = data.scanned }
+          const arm = () => {
+            if (!alive) return
+            timer = window.setTimeout(() => {
+              if (!alive) return
+              const d = dataRef.current
+              if (d !== null && d.partial === true) {
+                if (d.scanned === st.scanned) st.same++
+                else { st.same = 0; st.scanned = d.scanned }
+                if (document.visibilityState === 'visible') refresh()
+              }
+              arm()
+            }, st.same >= 8 ? 12000 : 2000)
+          }
+          arm()
+          return () => { alive = false; window.clearTimeout(timer) }
         }, [data, refresh])
 
         // 昂贵派生（两次全量 aggregate + 颜色表）只随数据/范围重算：
@@ -861,6 +905,12 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         const aggAll = derived.aggAll
         const hasData = aggAll.first !== null
 
+        const storageTipContent = el('div', null,
+          el('div', { className: 'ts-pop-title' }, '持久化缓存不可用'),
+          el('div', { className: 'ts-pop-row' },
+            el('span', { className: 'ts-pop-k' }, '统计仍正常运行；重启后需全量重扫。详情见宿主日志 [token-stats] storage domain')))
+        const showStorageTip = (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: storageTipContent })
+
         children.push(el('div', { className: 'ts-toolbar' },
           el('label', { className: 'ts-hint' }, '时间范围'),
           el('select', { className: 'ts-select', value: range, onChange: (e) => setRange(e.target.value) },
@@ -868,7 +918,8 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           el('span', { className: 'ts-hint', style: { marginLeft: 'auto' } },
             '更新于 ' + hhmm(data.generatedAt) + (loading ? ' · 刷新中…' : '')),
           data.storage === 'disabled'
-            ? el('span', { className: 'ts-hint', title: '持久化缓存不可用（详见宿主日志 [token-stats] storage domain），统计仍正常运行，重启后需全量重扫' }, '⚠ 无持久缓存')
+            ? el('span', { className: 'ts-hint', style: { cursor: 'help' },
+                onMouseEnter: showStorageTip, onMouseMove: showStorageTip, onMouseLeave: () => setStatPop(null) }, '⚠ 无持久缓存')
             : null,
           el('button', { className: 'ts-btn', onClick: refresh, disabled: loading },
             el('span', { className: loading ? 'ts-spin' : '' }, '↻'),
@@ -933,8 +984,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         if (peakDay) cards.push(el(StatCard, {
           label: '峰值单日', count: peakDay.t, sub: dispDay(peakDay.d), delay: cards.length * 45,
           onHover: (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: breakdown(peakDay.d + ' 各模型', Object.entries(peakDay.byModel || {}).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([mk, v]) => {
-            const info = data.models[mk]
-            return [info ? info.model : mk, v, 1, peakDay.t]
+            return [mk, v, 1, peakDay.t]
           })) }), onLeave: leaveStat,
           visual: [el(ComposeBar, { parts: Object.entries(peakDay.byModel || {}).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([mk, v]) => {
             const info = data.models[mk]
@@ -1004,8 +1054,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
               el('button', {
                 key: s.name, className: 'ts-modelchip', 'data-off': s.visible ? '0' : '1',
                 'aria-pressed': s.visible ? 'true' : 'false',
-                onClick: () => { if (s.name === '__total__') setShowTotal(!showTotal); else setModelOff({ ...modelOff, [s.name]: !modelOff[s.name] }) },
-                title: '点击切换显示/隐藏'
+                onClick: () => { if (s.name === '__total__') setShowTotal(!showTotal); else setModelOff({ ...modelOff, [s.name]: !modelOff[s.name] }) }
               },
                 el('span', { className: 'ts-dot', style: { background: s.color } }),
                 el('span', { className: 'ts-mc-name' }, s.shortName))),
@@ -1045,17 +1094,17 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
             const name = info ? info.model : m.m
             const color = modelColor(m.m)
             const pct = sc.total > 0 ? (m.t / sc.total * 100) : 0
-            const hoverContent = () => breakdown(name + ' 用量构成', [
+            const hoverContent = () => breakdown(m.m + ' 用量构成', [
               ['输入', m.i, 1, m.t], ['输出', m.o, 1, m.t], ['缓存读', m.cr, 1, m.t], ['缓存写', m.cw, 1, m.t]
             ])
             return el('div', { key: m.m, className: 'ts-model',
               onMouseEnter: (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: hoverContent() }),
               onMouseMove: (e) => setStatPop({ mx: e.clientX, my: e.clientY, content: hoverContent() }),
               onMouseLeave: leaveStat },
-              el('span', { className: 'ts-dot', style: { background: color }, title: m.m }),
+              el('span', { className: 'ts-dot', style: { background: color } }),
               el('div', { style: { minWidth: 0, flex: '1' } },
                 el('div', { style: { display: 'flex', justifyContent: 'space-between', gap: 8, minWidth: 0 } },
-                  el('span', { className: 'ts-modelname', title: m.m }, name),
+                  el('span', { className: 'ts-modelname' }, name),
                   el('span', { className: 'ts-modelval' }, fmt(m.t) + ' · ' + pct.toFixed(1) + '%')),
                 el('div', { className: 'ts-bartrack' },
                   el('span', { className: 'ts-barfill', style: { width: (m.t / arr[0].t * 100).toFixed(1) + '%', background: color, animationDelay: (i * 40 + 120) + 'ms' } })),
@@ -1081,6 +1130,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
       return function TodaySidebarCard(props) {
         const wide = !(props && props.wide === false)
         const [data, setData] = React.useState(null)
+        const [tip, setTip] = React.useState(null)
         const refresh = React.useCallback(() => {
           bridge.getData().then((v) => {
             if (v && v.ready === true) setData(v)
@@ -1111,11 +1161,30 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 
         // 完全折叠（rail 模式）：今日总量可读数字 + 今日/昨日双条对比
         if (!wide) {
-          // rail（折叠侧栏）：footerActions 已垂直化，徽章在上、本卡在下（流内、无溢出）
-          return el('div', { className: 'ts-today ts-todayRail', title: '今日 ' + fmtFull(todayTotal) + ' tokens · 昨日 ' + fmtFull(yTotal) },
+          // rail（折叠侧栏）：footerActions 已垂直化，徽章在上、本卡在下（流内、无溢出）；
+          // 悬浮用绘制版明细（禁用原生 title，避免与绘制悬浮叠加出现双悬浮）
+          const showTip = (e) => setTip({ mx: e.clientX, my: e.clientY })
+          const hideTip = () => setTip(null)
+          const dTxt = delta === null ? (todayTotal > 0 ? '昨日无消耗' : '—') : ((delta >= 0 ? '+' : '') + delta.toFixed(0) + '% vs 昨日')
+          return el('div', { className: 'ts-today ts-todayRail',
+            onMouseEnter: showTip, onMouseMove: showTip, onMouseLeave: hideTip },
             el('div', { className: 'ts-todaylabel' }, '今日'),
             el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmtRail }),
-            el(DualBars, { className: 'ts-dualbars', a: todayTotal, b: yTotal }))
+            el(DualBars, { className: 'ts-dualbars', a: todayTotal, b: yTotal }),
+            tip === null ? null : (() => {
+              const pos = tipPos(tip.mx, tip.my, 190, 82)
+              return el('div', { className: 'ts-tipfixed', style: pos },
+                el('div', { className: 'ts-tiprow', style: { fontWeight: 600, marginBottom: 2 } }, '今日用量'),
+                el('div', { className: 'ts-tiprow' },
+                  el('span', { className: 'ts-tip-k' }, '今日'),
+                  el('span', { className: 'ts-tip-v' }, fmt(todayTotal))),
+                el('div', { className: 'ts-tiprow' },
+                  el('span', { className: 'ts-tip-k' }, '昨日'),
+                  el('span', { className: 'ts-tip-v' }, fmt(yTotal))),
+                el('div', { className: 'ts-tiprow' },
+                  el('span', { className: 'ts-tip-k' }, '对比'),
+                  el('span', { className: 'ts-tip-v' }, dTxt)))
+            })())
         }
 
         // 各模型今日逐小时序列（0..当前小时），配色与统计页一致
@@ -1134,7 +1203,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           modelHourSeries.push({ name: mk, shortName: (data.models[mk] || {}).model || mk, color: modelColor(mk), values: vals })
         }
 
-        return el('div', { className: 'ts-today', title: '今日 Token 用量 · ' + modelHourSeries.length + ' 个模型' },
+        return el('div', { className: 'ts-today' },
           el('div', { className: 'ts-todayhead' },
             el('span', { className: 'ts-todaylabel' }, '今日 Token'),
             el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmt })),
@@ -1142,7 +1211,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           modelHourSeries.length > 0
             ? el('div', { className: 'ts-todaymodels' },
                 modelHourSeries.map((s, si) =>
-                  el('span', { key: s.name, className: 'ts-todaymchip ts-fadein', style: { animationDelay: (si * 60) + 'ms' }, title: s.shortName + ' · ' + fmtFull(s.values.reduce((a, b) => a + b, 0)) },
+                  el('span', { key: s.name, className: 'ts-todaymchip ts-fadein', style: { animationDelay: (si * 60) + 'ms' } },
                     el('span', { className: 'ts-dot', style: { background: s.color } }),
                     el('span', null, s.shortName))))
             : null,

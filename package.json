@@ -43,6 +43,6 @@
     }
   },
   "scripts": {
-    "test": "node test/fold.test.mjs && node test/fsindex.test.mjs"
+    "test": "node test/fold.test.mjs && node test/fsindex.test.mjs && node test/async.test.mjs"
   }
 }

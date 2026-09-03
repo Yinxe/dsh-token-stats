@@ -11,6 +11,8 @@ DeepSeek Harness（DSH) 统计插件：聚合本机全部会话日志的 Token �
 - **今日入口**：侧边栏底部今日用量 + 逐小时模型堆叠图 + 昨日对比
 - **时间范围**：近 7/30/90 天 / 全部
 - **动效**：指标数字滚动、曲线描边生长、直方图柱子升起、热力图逐列点亮、环形图展开、tooltip 弹入（均遵循系统「减弱动态效果」设置）
+- **悬浮**：全部图表悬浮信息均为自绘制 fixed 悬浮（跟随鼠标 + 视口边缘翻转），禁用原生 tooltip；卡片悬停浮起用 top 实现，不劫持悬浮定位
+- **刷新**：60s 基线 + 切回即刷 + partial 渐进加速（2s 起步、无进展退避 12s）；请求守卫防叠加、无变化跳过渲染；单会话读取 20s 超时防泵钉死
 
 ## 效果预览
 
@@ -111,7 +113,7 @@ lib/http.js      同源 JSON 路由（no-store）
 client.js        Client 半：__ModuleLoader__ bundle，设置页 + 侧边栏今日入口
                  （聚合 useMemo 缓存；footer 菜单垂直布局兼容 Cordis 徽章共存）
 cordis.patch.yml bundle 层 patch：仅 insert 挂载行
-test/            单元测试（npm test：fold 抽取 ×7 + fsindex ×4）
+test/            单元测试（npm test：fold 抽取 ×7 + fsindex ×4 + async ×4）
 ```
 
 ## 免责声明
