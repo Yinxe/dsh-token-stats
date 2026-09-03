@@ -43,6 +43,14 @@ window.__ModuleLoader__.load({
     /** 精确千分位（悬浮明细用）。 */
     const fmtFull = (n) => Math.round(n || 0).toLocaleString('en-US')
 
+    /** 极紧凑格式（折叠侧栏 rail 卡片用）：整数万/亿，宽度 ≤ 5 字符。 */
+    const fmtRail = (n) => {
+      n = Math.round(n || 0)
+      if (n >= 1e8) return (n / 1e8).toFixed(1).replace(/\.0$/, '') + '亿'
+      if (n >= 1e4) return String(Math.round(n / 1e4)) + '万'
+      return String(n)
+    }
+
     const niceMax = (m) => { if (m <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log(m) / Math.LN10)); const c = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]; for (let i = 0; i < c.length; i++) { if (c[i] * p >= m) return c[i] * p } return 10 * p }
     const median = (arr) => { if (arr.length === 0) return 0; const s = [...arr].sort((a, b) => a - b); const mid = Math.floor(s.length / 2); return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2 }
 
@@ -235,11 +243,12 @@ window.__ModuleLoader__.load({
 .ts-todaymchip{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--dsw-alias-label-secondary);max-width:45%;line-height:14px}
 .ts-todaymchip .ts-dot{width:7px;height:7px}
 .ts-todaymchip span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ts-todayRail{padding:6px 4px}
+.ts-todayRail{padding:2px;box-sizing:border-box;width:36px;height:44px;margin:0;position:fixed;left:10px;bottom:100px;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;border-radius:12px;background:var(--dsw-alias-bg-layer-1);cursor:pointer}
+.ts-todayRail:hover{border-color:var(--dsw-alias-state-business-primary)}
 .ts-todayRail .ts-todaymodels,.ts-todayRail .ts-spark,.ts-todayRail .ts-statgrow{display:none}
-.ts-todayRail .ts-todayhead{display:block}
-.ts-todayRail .ts-todayval{font-size:12px;line-height:16px;text-align:center}
-.ts-todayRail .ts-todaylabel{text-align:center}
+.ts-todayRail .ts-todayhead{display:none}
+.ts-todayRail .ts-todayval{font-size:9px;line-height:12px;text-align:center;white-space:nowrap;font-weight:600}
+.ts-todayRail .ts-todaylabel{font-size:8px;line-height:11px;text-align:center;white-space:nowrap;letter-spacing:.06em}
 .ts-swrow{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 14px;margin:0 0 12px}
 .ts-swlabel{font-size:13px;font-weight:500;color:var(--dsw-alias-label-primary)}
 .ts-swhint{font-size:11.5px;color:var(--dsw-alias-label-secondary);margin-top:2px}
@@ -1079,10 +1088,11 @@ window.__ModuleLoader__.load({
 
         // 完全折叠（rail 模式）：今日总量可读数字 + 今日/昨日双条对比
         if (!wide) {
+          // rail（折叠侧栏 56px）：与 Cordis 徽章水平并排必然溢出被裁——
+          // 改为 36px 圆形小卡 fixed 定位在徽章上方，垂直堆叠（dsh 自绘徽章占用行内空间）
           return el('div', { className: 'ts-today ts-todayRail', title: '今日 ' + fmtFull(todayTotal) + ' tokens · 昨日 ' + fmtFull(yTotal) },
             el('div', { className: 'ts-todaylabel' }, '今日'),
-            el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmt }),
-            el(DualBars, { a: todayTotal, b: yTotal }))
+            el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmtRail }))
         }
 
         // 各模型今日逐小时序列（0..当前小时），配色与统计页一致
