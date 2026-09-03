@@ -243,7 +243,10 @@ window.__ModuleLoader__.load({
 .ts-todaymchip{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--dsw-alias-label-secondary);max-width:45%;line-height:14px}
 .ts-todaymchip .ts-dot{width:7px;height:7px}
 .ts-todaymchip span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ts-todayRail{padding:2px;box-sizing:border-box;width:36px;height:44px;margin:0;position:fixed;left:10px;bottom:100px;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;border-radius:12px;background:var(--dsw-alias-bg-layer-1);cursor:pointer}
+/* ── 侧栏 footer actions 垂直布局：与 Cordis 徽章并排会横向溢出被裁（折叠侧栏仅 56px），改为垂直堆叠 ── */
+.hHd-Xa_footerActions{flex-direction:column;align-items:stretch}
+.hHd-Xa_collapsed .hHd-Xa_footerActions{align-items:center}
+.ts-todayRail{padding:3px 4px;box-sizing:border-box;min-width:0;max-width:100%;width:auto;margin:2px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;background:var(--dsw-alias-bg-layer-1);cursor:pointer}
 .ts-todayRail:hover{border-color:var(--dsw-alias-state-business-primary)}
 .ts-todayRail .ts-todaymodels,.ts-todayRail .ts-spark,.ts-todayRail .ts-statgrow{display:none}
 .ts-todayRail .ts-todayhead{display:none}
@@ -446,7 +449,7 @@ window.__ModuleLoader__.load({
       const { a, b, height } = props
       const max = Math.max(a, b) || 1
       const H = height || 14
-      return el('div', { style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3, height: H + 2, marginTop: 3 } },
+      return el('div', { className: props.className || '', style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3, height: H + 2, marginTop: 3 } },
         el('span', { title: props.aTitle || '今日', className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, display: 'block', height: Math.max(2, a / max * H).toFixed(1) + 'px', animationDelay: '60ms' } }),
         el('span', { title: props.bTitle || '昨日', className: 'ts-rise', style: { width: 9, borderRadius: '2px 2px 0 0', background: BP, opacity: .28, display: 'block', height: Math.max(2, b / max * H).toFixed(1) + 'px', animationDelay: '150ms' } }))
     }
@@ -1088,11 +1091,11 @@ window.__ModuleLoader__.load({
 
         // 完全折叠（rail 模式）：今日总量可读数字 + 今日/昨日双条对比
         if (!wide) {
-          // rail（折叠侧栏 56px）：与 Cordis 徽章水平并排必然溢出被裁——
-          // 改为 36px 圆形小卡 fixed 定位在徽章上方，垂直堆叠（dsh 自绘徽章占用行内空间）
+          // rail（折叠侧栏）：footerActions 已垂直化，徽章在上、本卡在下（流内、无溢出）
           return el('div', { className: 'ts-today ts-todayRail', title: '今日 ' + fmtFull(todayTotal) + ' tokens · 昨日 ' + fmtFull(yTotal) },
             el('div', { className: 'ts-todaylabel' }, '今日'),
-            el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmtRail }))
+            el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmtRail }),
+            el(DualBars, { className: 'ts-dualbars', a: todayTotal, b: yTotal }))
         }
 
         // 各模型今日逐小时序列（0..当前小时），配色与统计页一致
