@@ -22,6 +22,20 @@ window.__ModuleLoader__.load({
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
     const React = require('react')
     const el = React.createElement
+    // react-dom 官方包在插件 require 映射内（官方 bundle 同款用法），取不到时降级为内联渲染
+    let ReactDOM = null
+    try { ReactDOM = require('react-dom') } catch {}
+    // 浮窗 .ts-float 带 backdrop-filter + overflow:hidden，会成为 fixed 后代的定位基准并裁剪之；
+    // 图表悬浮提示必须 portal 到 body 才能跟随鼠标（债权：tipPos 本就按视口坐标计算）
+    function tsPortal(node) {
+      if (node === null || node === undefined) return null
+      try {
+        if (ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined' && document.body) {
+          return ReactDOM.createPortal(node, document.body)
+        }
+      } catch {}
+      return node
+    }
 
     //#region util ───────────────────────────────────────────────────────
 
@@ -188,6 +202,7 @@ window.__ModuleLoader__.load({
 .ts-pop-bar{height:4px;border-radius:2px;background:var(--dsw-alias-interactive-bg-hover);flex:1;min-width:50px;overflow:hidden;display:block}
 .ts-pop-fill{height:100%;border-radius:2px;display:block}
 .ts-tipfixed{position:fixed;background:var(--dsw-specific-menu);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:var(--dsw-shadow-lv3);padding:7px 10px;font-size:11.5px;line-height:1.5;pointer-events:none;color:var(--dsw-alias-label-primary);z-index:60;max-width:280px}
+.ts-tipfloat{z-index:500}
 .ts-tiprow{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .ts-tip-k{color:var(--dsw-alias-label-secondary)}
 .ts-tip-v{font-variant-numeric:tabular-nums;font-weight:500}
@@ -242,8 +257,8 @@ window.__ModuleLoader__.load({
 .ts-todayval{color:var(--dsw-alias-label-primary);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;line-height:24px}
 .ts-todayhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .ts-todayhead .ts-todayval{font-size:15px;flex:none}
-.ts-todaymodels{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
-.ts-todaymchip{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--dsw-alias-label-secondary);max-width:45%;line-height:14px}
+.ts-todaymodels{display:flex;flex-direction:column;align-items:stretch;gap:2px;margin-top:5px}
+.ts-todaymchip{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--dsw-alias-label-secondary);max-width:100%;line-height:14px}
 .ts-todaymchip .ts-dot{width:7px;height:7px}
 .ts-todaymchip span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* ── 侧栏 footer actions 垂直布局：与 Cordis 徽章并排会横向溢出被裁（折叠侧栏仅 56px），改为垂直堆叠 ── */
@@ -257,6 +272,16 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 .ts-todayRail .ts-todayhead{display:none}
 .ts-todayRail .ts-todayval{font-size:9px;line-height:12px;text-align:center;white-space:nowrap;font-weight:600}
 .ts-todayRail .ts-todaylabel{font-size:8px;line-height:11px;text-align:center;white-space:nowrap;letter-spacing:.06em}
+/* ── 今日卡浮窗：抓手拖出 / 标题栏拖到任意位置 / 双击或📌收回 ── */
+.ts-todayhead .ts-todayval{margin-left:auto}
+.ts-grip{flex:none;cursor:grab;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:1;padding:4px 2px;border-radius:6px;user-select:none;-webkit-user-select:none;touch-action:none}
+.ts-grip:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2)}
+.ts-grip:active{cursor:grabbing}
+.ts-minibtn{flex:none;background:transparent;border:1px solid transparent;border-radius:6px;cursor:pointer;color:var(--dsw-alias-label-secondary);font-size:11px;padding:2px 6px;font-family:inherit;line-height:16px;margin-left:6px}
+.ts-minibtn:hover{border-color:var(--dsw-alias-border-l1);color:var(--dsw-alias-label-primary)}
+.ts-float{position:fixed;z-index:300;width:300px;max-width:calc(100vw - 16px);background:color-mix(in srgb, var(--dsw-alias-bg-layer-1) 72%, transparent);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border:1px solid var(--dsw-alias-border-l2);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.3);padding:10px 12px;box-sizing:border-box;overflow:hidden}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.ts-float{background:var(--dsw-alias-bg-layer-1)}}
+.ts-floathead{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
 .ts-swrow{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 14px;margin:0 0 12px}
 .ts-swlabel{font-size:13px;font-weight:500;color:var(--dsw-alias-label-primary)}
 .ts-swhint{font-size:11.5px;color:var(--dsw-alias-label-secondary);margin-top:2px}
@@ -710,7 +735,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         ? (() => {
             const active = seriesList.filter((s) => (s.values[hover.i] || 0) > 0)
             const pos = tipPos(hover.mx, hover.my, 170, 34 + active.length * 16)
-            return el('div', { className: 'ts-tipfixed', style: { ...pos, fontSize: 10.5 } },
+            return tsPortal(el('div', { className: 'ts-tipfixed' + (props.floatTip === true ? ' ts-tipfloat' : ''), style: { ...pos, fontSize: 10.5 } },
               el('div', { style: { fontWeight: 600 } }, hover.i + ':00'),
               active.length > 0
                 ? active.sort((a, b) => (b.values[hover.i] || 0) - (a.values[hover.i] || 0)).map((s) =>
@@ -718,7 +743,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
                       el('span', { className: 'ts-dot', style: { background: s.color, width: 6, height: 6 } }),
                       el('span', { className: 'ts-tip-k', style: { overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 } }, s.shortName),
                       el('span', { className: 'ts-tip-v' }, fmt(s.values[hover.i] || 0))))
-                : el('div', { style: { color: 'var(--dsw-alias-label-tertiary)' } }, '该小时无消耗'))
+                : el('div', { style: { color: 'var(--dsw-alias-label-tertiary)' } }, '该小时无消耗')))
           })()
         : null
       return el('div', { className: 'ts-svgwrap' },
@@ -745,6 +770,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         const [showTotal, setShowTotal] = React.useState(false)
         const [statPop, setStatPop] = React.useState(null)
         const [todayOn, setTodayOn] = React.useState(false)
+        const tsFl = useTsFloat()
         // 偏好经标准 settings 加载（挂载后回填；失败则保持默认）
         React.useEffect(() => {
           let alive = true
@@ -856,6 +882,15 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
             onClick: () => { const next = !todayOn; setTodayOn(next); if (prefs) prefs.setToday(next) }
           },
             el('span', { className: 'ts-knob' }))))
+
+        // 今日卡浮窗行：弹出后侧边栏零占位，在此一键收回
+        children.push(el('div', { className: 'ts-swrow' },
+          el('div', null,
+            el('div', { className: 'ts-swlabel' }, '今日卡片浮窗'),
+            el('div', { className: 'ts-swhint' }, '弹出后可拖到屏幕任意位置，侧边栏不再占位；开关与坐标存本机 localStorage')),
+          tsFl.open
+            ? el('button', { className: 'ts-btn', onClick: () => tsFloatSet(false) }, '收回侧边栏')
+            : el('div', { className: 'ts-hint' }, '在侧边栏中（卡片标题栏 ⠿ 可拖出）')))
 
         if (err) {
           children.push(el('div', { className: 'ts-notice ts-notice-err' }, '读取失败：' + err))
@@ -1125,6 +1160,97 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
       }
     }
 
+    //#region today-float ── 今日卡弹出/拖拽/收回（开关与坐标经 localStorage 持久化）──
+    // 注意：侧栏与浮窗同一时刻只挂载一个 TodayCard 实例（弹出后侧栏返回 null），
+    // 因此不会双倍轮询 /ext/dshp-inx-token-stats/data。
+    const TS_FLOAT_LS_OPEN = 'ts-today.float.open'
+    const TS_FLOAT_LS_POS = 'ts-today.float.pos'
+    function tsFloatLoadOpen() {
+      try { return window.localStorage.getItem(TS_FLOAT_LS_OPEN) === '1' } catch { return false }
+    }
+    function tsFloatLoadPos() {
+      try {
+        const v = JSON.parse(window.localStorage.getItem(TS_FLOAT_LS_POS) || 'null')
+        if (v && isFinite(v.x) && isFinite(v.y)) return { x: Number(v.x), y: Number(v.y) }
+      } catch {}
+      return null
+    }
+    function tsFloatSave(open, pos) {
+      try {
+        window.localStorage.setItem(TS_FLOAT_LS_OPEN, open ? '1' : '0')
+        if (pos) window.localStorage.setItem(TS_FLOAT_LS_POS, JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) }))
+      } catch {}
+    }
+    function tsFloatDefaultPos() {
+      try {
+        const vw = window.innerWidth || 1024, vh = window.innerHeight || 768
+        return { x: Math.max(8, vw - 332), y: Math.max(8, Math.min(120, vh - 340)) }
+      } catch { return { x: 100, y: 100 } }
+    }
+    function tsFloatClamp(p) {
+      try {
+        const vw = window.innerWidth || 1024, vh = window.innerHeight || 768
+        return { x: Math.max(8, Math.min(p.x, vw - 316)), y: Math.max(8, Math.min(p.y, vh - 140)) }
+      } catch { return p }
+    }
+    const tsFloat = { open: tsFloatLoadOpen(), pos: tsFloatLoadPos() }
+    const tsFloatListeners = new Set()
+    const tsFloatEmit = () => { for (const fn of tsFloatListeners) fn({ open: tsFloat.open, pos: tsFloat.pos }) }
+    function tsFloatSet(open) {
+      tsFloat.open = open
+      if (open) tsFloat.pos = tsFloatClamp(tsFloat.pos || tsFloatLoadPos() || tsFloatDefaultPos())
+      tsFloatSave(tsFloat.open, tsFloat.pos)
+      tsFloatEmit()
+    }
+    function useTsFloat() {
+      const [, force] = React.useReducer((x) => x + 1, 0)
+      React.useEffect(() => {
+        const fn = () => force()
+        tsFloatListeners.add(fn)
+        return () => { tsFloatListeners.delete(fn) }
+      }, [])
+      return tsFloat
+    }
+    // 侧栏抓手：点按=弹出浮窗；按住拖动超 8px=直接拖出为浮窗并跟随鼠标
+    function tsGripDragOut(e) {
+      if (e.button !== undefined && e.button !== 0) return
+      if (e.preventDefault) e.preventDefault()
+      if (e.stopPropagation) e.stopPropagation()
+      const sx = e.clientX, sy = e.clientY
+      let out = false
+      function mv(ev) {
+        if (!out && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 8) return
+        out = true
+        tsFloat.open = true
+        tsFloat.pos = tsFloatClamp({ x: ev.clientX - 60, y: ev.clientY - 20 })
+        tsFloatEmit()
+      }
+      function up() {
+        try { window.removeEventListener('pointermove', mv) } catch {}
+        try { window.removeEventListener('pointerup', up) } catch {}
+        if (out) tsFloatSave(true, tsFloat.pos)
+        else tsFloatSet(true)
+      }
+      try { window.addEventListener('pointermove', mv) } catch {}
+      try { window.addEventListener('pointerup', up) } catch {}
+    }
+    // 浮窗标题栏拖动：按住到屏幕任意位置，松手即停靠（按钮上按下不触发）
+    function tsFloatDrag(e) {
+      if (e.button !== undefined && e.button !== 0) return
+      if (e.target && e.target.closest && e.target.closest('button')) return
+      if (e.preventDefault) e.preventDefault()
+      const p0 = tsFloatClamp(tsFloat.pos || tsFloatLoadPos() || tsFloatDefaultPos())
+      const ox = e.clientX - p0.x, oy = e.clientY - p0.y
+      function mv(ev) { tsFloat.pos = tsFloatClamp({ x: ev.clientX - ox, y: ev.clientY - oy }); tsFloatEmit() }
+      function up() {
+        try { window.removeEventListener('pointermove', mv) } catch {}
+        try { window.removeEventListener('pointerup', up) } catch {}
+        tsFloatSave(tsFloat.open, tsFloat.pos)
+      }
+      try { window.addEventListener('pointermove', mv) } catch {}
+      try { window.addEventListener('pointerup', up) } catch {}
+    }
+    //#endregion
     /** 侧栏今日用量小卡片（开关开启时渲染）。 */
     function createTodayCard(bridge) {
       return function TodaySidebarCard(props) {
@@ -1142,7 +1268,18 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           return () => { window.clearInterval(id) }
         }, [refresh])
 
+        const isFloat = !!(props && props.float === true)
+        const floatPos = (props && props.floatPos) || null
+        const floatXY = isFloat ? tsFloatClamp(floatPos || tsFloatLoadPos() || tsFloatDefaultPos()) : null
+
         if (data === null) {
+          if (isFloat) {
+            return el('div', { className: 'ts-float', style: { left: floatXY.x + 'px', top: floatXY.y + 'px' } },
+              el('div', { className: 'ts-todayhead ts-floathead', title: '按住拖到任意位置 · 双击收回侧边栏', onPointerDown: tsFloatDrag, onDoubleClick: () => tsFloatSet(false) },
+                el('span', { className: 'ts-todaylabel' }, '今日用量'),
+                el('span', { className: 'ts-todayval', style: { opacity: .5 } }, '…'),
+                el('button', { className: 'ts-minibtn', title: '收回侧边栏', onClick: (e) => { if (e.stopPropagation) e.stopPropagation(); tsFloatSet(false) } }, '📌')))
+          }
           return el('div', { className: 'ts-today' + (wide ? '' : ' ts-todayRail') },
             el('div', { className: 'ts-todaylabel' }, '今日用量'),
             el('div', { className: 'ts-todayval', style: { opacity: .5 } }, '…'))
@@ -1203,11 +1340,21 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           modelHourSeries.push({ name: mk, shortName: (data.models[mk] || {}).model || mk, color: modelColor(mk), values: vals })
         }
 
-        return el('div', { className: 'ts-today' },
-          el('div', { className: 'ts-todayhead' },
+        return el('div', isFloat
+          ? { className: 'ts-float', style: { left: floatXY.x + 'px', top: floatXY.y + 'px' } }
+          : { className: 'ts-today' },
+          el('div', isFloat
+            ? { className: 'ts-todayhead ts-floathead', title: '按住拖到任意位置 · 双击收回侧边栏', onPointerDown: tsFloatDrag, onDoubleClick: () => tsFloatSet(false) }
+            : { className: 'ts-todayhead' },
+            isFloat ? null : el('span', { className: 'ts-grip', title: '按住拖出为浮窗，点按直接弹出', onPointerDown: tsGripDragOut }, '⠿'),
             el('span', { className: 'ts-todaylabel' }, '今日 Token'),
-            el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmt })),
-          el(TodayChart, { series: modelHourSeries, n: nowHour + 1 }),
+            el(AnimatedNumber, { className: 'ts-todayval', value: todayTotal, format: fmt }),
+            el('button', {
+              className: 'ts-minibtn',
+              title: isFloat ? '收回侧边栏' : '弹出为浮窗（可拖到屏幕任意位置）',
+              onClick: (e) => { if (e.stopPropagation) e.stopPropagation(); tsFloatSet(!isFloat) }
+            }, isFloat ? '📌' : '⧉')),
+          el(TodayChart, { series: modelHourSeries, n: nowHour + 1, floatTip: isFloat }),
           modelHourSeries.length > 0
             ? el('div', { className: 'ts-todaymodels' },
                 modelHourSeries.map((s, si) =>
@@ -1285,7 +1432,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
       ))
 
       const TodayCard = createTodayCard(bridge)
-      function TodaySidebarEntry(props) {
+      function useTodayPref() {
         const [on, setOn] = React.useState(null)
         React.useEffect(() => {
           let alive = true
@@ -1294,11 +1441,29 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           todayPrefListeners.add(fn)
           return () => { todayPrefListeners.delete(fn); alive = false }
         }, [])
+        return on
+      }
+      function TodaySidebarEntry(props) {
+        const on = useTodayPref()
+        const fl = useTsFloat()
+        // 已弹出为浮窗时侧边栏完全不占位（收回入口：浮窗📌 / 设置页浮窗行）
+        if (fl.open) return null
         return on === true ? el(TodayCard, props) : null
+      }
+      function TodayFloatEntry() {
+        const on = useTodayPref()
+        const fl = useTsFloat()
+        if (on !== true || !fl.open) return null
+        const pos = tsFloatClamp(fl.pos || tsFloatLoadPos() || tsFloatDefaultPos())
+        return el(TodayCard, { wide: true, float: true, floatPos: pos })
       }
       slots.inject('sidebar.footer.action', () => slots.register(
         { name: 'sidebar.footer.action', id: 'dshp-inx-token-stats-today' },
         TodaySidebarEntry
+      ))
+      slots.inject('shell.overlay', () => slots.register(
+        { name: 'shell.overlay', id: 'dshp-inx-token-stats-float' },
+        TodayFloatEntry
       ))
     }
 
