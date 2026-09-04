@@ -21,6 +21,7 @@ window.__ModuleLoader__.load({
     var exports = module.exports
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
     const React = require('react')
+    const P = require('@deepseek-ai/dsh-client-ui-primitives')
     const el = React.createElement
     // react-dom 官方包在插件 require 映射内（官方 bundle 同款用法），取不到时降级为内联渲染
     let ReactDOM = null
@@ -186,7 +187,10 @@ window.__ModuleLoader__.load({
 .ts-notice-empty{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary)}
 .ts-hint{font-size:12px;color:var(--dsw-alias-label-secondary)}
 .ts-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
-.ts-select{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);border-radius:8px;padding:5px 8px;font-size:12.5px;font-family:inherit;outline:none}
+.ts-select{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}
+.ts-select:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}
+.ts-selectorLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ts-selectChevron{flex:none}
 .ts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px}
 .ts-stat{background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;transition:border-color .15s}
 .ts-stat:hover{border-color:var(--dsw-alias-state-business-primary)}
@@ -282,13 +286,15 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 .ts-float{position:fixed;z-index:300;width:300px;max-width:calc(100vw - 16px);background:color-mix(in srgb, var(--dsw-alias-bg-layer-1) 72%, transparent);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border:1px solid var(--dsw-alias-border-l2);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.3);padding:10px 12px;box-sizing:border-box;overflow:hidden}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.ts-float{background:var(--dsw-alias-bg-layer-1)}}
 .ts-floathead{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
-.ts-swrow{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 14px;margin:0 0 12px}
-.ts-swlabel{font-size:13px;font-weight:500;color:var(--dsw-alias-label-primary)}
-.ts-swhint{font-size:11.5px;color:var(--dsw-alias-label-secondary);margin-top:2px}
-.ts-switch{position:relative;width:38px;height:22px;border-radius:11px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);cursor:pointer;padding:0;flex:none;transition:background .18s}
-.ts-switch[aria-checked="true"]{background:var(--dsw-alias-state-business-primary);border-color:transparent}
-.ts-switch .ts-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--dsw-alias-label-primary-foreground);transition:left .18s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
-.ts-switch[aria-checked="true"] .ts-knob{left:19px}
+.ts-swrow{border-bottom:.5px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}
+.ts-swrowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}
+.ts-swlabel{font-size:14px;font-weight:400;line-height:22px;color:var(--dsw-alias-label-primary)}
+.ts-swhint{font-size:12px;font-weight:400;line-height:18px;color:var(--dsw-alias-label-tertiary)}
+.ts-switch{box-sizing:border-box;background:var(--dsw-alias-border-l3);cursor:pointer;border:0;border-radius:10px;flex:none;width:36px;height:20px;padding:2px;position:relative}
+.ts-switch[aria-checked="true"]{background:var(--dsw-alias-brand-primary)}
+.ts-switch:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
+.ts-knob{corner-shape:round;background:var(--dsw-alias-label-primary-foreground);border-radius:50%;width:16px;height:16px;transition:transform .12s;display:block}
+.ts-switch[aria-checked="true"] .ts-knob{transform:translate(16px)}
 
 /* ── 动画与过渡增强（置于 CSS 末尾：覆盖同特异性前序声明）────────── */
 /* 注意：悬浮层用 position:fixed 跟随鼠标，祖先的 transform/filter 会劫持其定位基准
@@ -300,8 +306,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 .ts-stat[data-tint="1"] .ts-stat-value{background:linear-gradient(100deg,var(--dsw-alias-state-business-primary),color-mix(in srgb,var(--dsw-alias-state-business-primary) 52%,#34d399));-webkit-background-clip:text;background-clip:text;color:transparent}
 .ts-btn{transition:background .15s,border-color .15s}
 .ts-btn:hover:not(:disabled){border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 55%,var(--dsw-alias-border-l2))}
-.ts-select{transition:border-color .15s}
-.ts-select:focus{border-color:var(--dsw-alias-state-business-primary)}
+.ts-select{transition:background .15s}
 .ts-seg-btn{transition:color .15s,background .15s}
 .ts-seg-on{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-state-business-primary) 40%,transparent)}
 .ts-modelchip{position:relative;transition:border-color .15s,top .15s,opacity .2s}
@@ -607,6 +612,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
       const OPS = [0.16, 0.3, 0.5, 0.72, 0.95]
       const levelOf = (v) => v <= 0 ? 0 : v <= max * 0.25 ? 1 : v <= max * 0.5 ? 2 : v <= max * 0.75 ? 3 : 4
       const cellGap = months >= 12 ? 2.5 : (months >= 6 ? 3 : 4)   // 1/3/6 月加大呼吸感
+      const rowGap = months >= 12 ? 0 : cellGap   // 1/3/6 月行间也加上下边距，12 月保持紧凑
 
       const [hover, setHover] = React.useState(null)
       const onCell = (cell, e) => {
@@ -675,7 +681,9 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
           entries.length > 8 ? el('div', { className: 'ts-pop-k', style: { marginTop: 4 } }, '…另有 ' + (entries.length - 8) + ' 个模型') : null)
       }
 
-      return el('div', { className: 'ts-heatwrap' }, monthRow, rows, pop)
+      return el('div', { className: 'ts-heatwrap' }, monthRow,
+        el('div', { style: { display: 'flex', flexDirection: 'column', gap: rowGap + 'px' } }, rows),
+        pop)
     }
 
     function Donut(props) {
@@ -702,10 +710,11 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         el('div', { className: 'ts-donut-cap' }, '累计 Token'))
     }
 
-    /** 侧栏今日迷你多模型曲线：分色 + 十字 + fixed 悬浮（不裁剪）。 */
+    /** 侧栏近24小时迷你多模型曲线：分色 + 十字 + fixed 悬浮（不裁剪）。 */
     function TodayChart(props) {
       const seriesList = props.series
       const n = props.n
+      const tickLabels = props.labels || null
       const W = 160, H = 44, PAD = 3
       const [hover, setHover] = React.useState(null)
       const svgRef = React.useRef(null)
@@ -736,7 +745,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
             const active = seriesList.filter((s) => (s.values[hover.i] || 0) > 0)
             const pos = tipPos(hover.mx, hover.my, 170, 34 + active.length * 16)
             return tsPortal(el('div', { className: 'ts-tipfixed' + (props.floatTip === true ? ' ts-tipfloat' : ''), style: { ...pos, fontSize: 10.5 } },
-              el('div', { style: { fontWeight: 600 } }, hover.i + ':00'),
+              el('div', { style: { fontWeight: 600 } }, tickLabels !== null ? tickLabels[hover.i] : hover.i + ':00'),
               active.length > 0
                 ? active.sort((a, b) => (b.values[hover.i] || 0) - (a.values[hover.i] || 0)).map((s) =>
                     el('div', { key: s.name, className: 'ts-tiprow' },
@@ -755,11 +764,32 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
     //#region page ───────────────────────────────────────────────────────
 
     const RANGES = [{ v: '7', t: '近7天' }, { v: '30', t: '近30天' }, { v: '90', t: '近90天' }, { v: 'all', t: '全部' }]
+
+    /** 官方胶囊下拉：label + chevron → P.Menu(portal)。 */
+    function RangeSelect(props) {
+      const [open, setOpen] = React.useState(false)
+      const hit = props.options.filter((o) => o.v === props.value)[0]
+      const selector = el('button', {
+        type: 'button', className: 'ts-select',
+        'aria-haspopup': 'menu', 'aria-expanded': open,
+        onClick: () => setOpen((v) => !v)
+      },
+        el('span', { className: 'ts-selectorLabel' }, hit ? hit.t : props.value),
+        el(P.IconChevronDownOutline14, { className: 'ts-selectChevron' }))
+      return el(P.Menu, {
+        open, onClose: () => setOpen(false),
+        items: props.options.map((o) => ({ id: o.v, label: o.t })),
+        selectedId: props.value,
+        onSelect: (id) => { setOpen(false); props.onPick(id) },
+        align: 'end', portal: true, anchor: selector
+      })
+    }
     const rangeText = (rv) => { for (let i = 0; i < RANGES.length; i++) { if (RANGES[i].v === rv) return RANGES[i].t } return '' }
 
     /** 设置页主体（单页 + 顶部开关 + 指标卡可视化 + 三图表）。 */
     function createSection(bridge, prefs) {
       return function TokenStatsSection() {
+        useTsStyles()
         const [data, setData] = React.useState(null)
         const [err, setErr] = React.useState(null)
         const [loading, setLoading] = React.useState(true)
@@ -872,29 +902,30 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         children.push(el('p', { className: 'ts-desc' },
           '聚合本机全部会话日志（含子代理会话；fork/resume 种子事件已去重）。数据每 60 秒自动刷新；时间范围作用于当前范围卡片与模型分布，趋势图用自带的近24小时 / 近7天 / 近30天切换，总览与热力图为全量数据。'))
 
-        // 顶部功能开关：侧栏「今日用量」小卡片
+        // 顶部功能开关：侧栏「今日用量」小卡片（官方设置行结构）
         children.push(el('div', { className: 'ts-swrow' },
-          el('div', null,
+          el('div', { className: 'ts-swrowText' },
             el('div', { className: 'ts-swlabel' }, '在侧边栏显示今日用量'),
             el('div', { className: 'ts-swhint' }, '开启后左侧边栏底部显示今日 Token 消耗小卡片（含分色小时曲线与昨日对比；偏好存 settings.yaml · dshp-inx-token-stats）')),
           el('button', {
             className: 'ts-switch', role: 'switch', 'aria-checked': todayOn ? 'true' : 'false',
+            'aria-label': '在侧边栏显示今日用量',
             onClick: () => { const next = !todayOn; setTodayOn(next); if (prefs) prefs.setToday(next) }
           },
             el('span', { className: 'ts-knob' }))))
 
-        // 今日卡浮窗行：弹出后侧边栏零占位，在此一键收回
+        // 今日卡浮窗行：弹出后侧边栏零占位，在此一键收回（官方设置行结构）
         children.push(el('div', { className: 'ts-swrow' },
-          el('div', null,
+          el('div', { className: 'ts-swrowText' },
             el('div', { className: 'ts-swlabel' }, '今日卡片浮窗'),
             el('div', { className: 'ts-swhint' }, '弹出后可拖到屏幕任意位置，侧边栏不再占位；开关与坐标存本机 localStorage')),
           tsFl.open
-            ? el('button', { className: 'ts-btn', onClick: () => tsFloatSet(false) }, '收回侧边栏')
+            ? el(P.Button, { variant: 'outline', size: 'sm', onClick: () => tsFloatSet(false) }, '收回侧边栏')
             : el('div', { className: 'ts-hint' }, '在侧边栏中（卡片标题栏 ⠿ 可拖出）')))
 
         if (err) {
           children.push(el('div', { className: 'ts-notice ts-notice-err' }, '读取失败：' + err))
-          children.push(el('button', { className: 'ts-btn', onClick: refresh }, '重试'))
+          children.push(el(P.Button, { variant: 'outline', size: 'sm', onClick: refresh }, '重试'))
           return el('div', { className: 'ts-page' }, children)
         }
         if (data === null) {
@@ -915,17 +946,15 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
 
         children.push(el('div', { className: 'ts-toolbar' },
           el('label', { className: 'ts-hint' }, '时间范围'),
-          el('select', { className: 'ts-select', value: range, onChange: (e) => setRange(e.target.value) },
-            RANGES.map((o) => el('option', { key: o.v, value: o.v }, o.t))),
+          el(RangeSelect, { options: RANGES, value: range, onPick: setRange }),
           el('span', { className: 'ts-hint', style: { marginLeft: 'auto' } },
             '更新于 ' + hhmm(data.generatedAt) + (loading ? ' · 刷新中…' : '')),
           data.storage === 'disabled'
-            ? el('span', { className: 'ts-hint', style: { cursor: 'help' },
-                onMouseEnter: showStorageTip, onMouseMove: showStorageTip, onMouseLeave: () => setStatPop(null) }, '⚠ 无持久缓存')
+            ? el(P.Tooltip, { label: '统计仍正常运行；重启后需全量重扫。详情见宿主日志 [dshp-inx-token-stats] storage domain', side: 'bottom' },
+                el('span', { className: 'ts-hint', style: { cursor: 'help' } }, '⚠ 无持久缓存'))
             : null,
-          el('button', { className: 'ts-btn', onClick: refresh, disabled: loading },
-            el('span', { className: loading ? 'ts-spin' : '' }, '↻'),
-            loading ? ' 刷新中…' : ' 刷新')))
+          el(P.Button, { variant: 'outline', size: 'sm', onClick: refresh, disabled: loading, icon: loading ? el(P.IconLoadingOutline16) : el(P.IconRefreshOutline14) },
+            loading ? '刷新中…' : '刷新')))
 
         // 条件块一律用 null 占位保住数组位置：显隐只装卸自己，后续兄弟不移位、
         // 不重挂（重挂会重播全部入场动画——模型工作时 partial 每轮翻转即全页重播）
@@ -1251,9 +1280,42 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
       try { window.addEventListener('pointerup', up) } catch {}
     }
     //#endregion
+    //#region styles-heal ── 样式自愈：标签曾绑在 Cordis fiber 上（apply 插、释放删），
+    // 与 slot 组件的挂载时序错开就会"有组件无样式"。改为组件挂载兜底——
+    // 只要任一界面在屏，style 标签必存在；fiber 释放时仅无人使用才删。
+    let tsStyleEl = null
+    let tsStyleUsers = 0
+    function tsEnsureStyles() {
+      let tag = tsStyleEl
+      if (!tag || !tag.isConnected) {
+        try { document.querySelectorAll('style[data-plugin-css="dshp-inx-token-stats/settings.css"]').forEach((n) => { n.remove() }) } catch {}
+        tag = document.createElement('style')
+        tag.setAttribute('data-plugin-css', 'dshp-inx-token-stats/settings.css')
+        tag.textContent = CSS
+        try { document.head.appendChild(tag) } catch {}
+        tsStyleEl = tag
+      }
+      return tag
+    }
+    function useTsStyles() {
+      React.useEffect(() => {
+        const tag = tsEnsureStyles()
+        tsStyleUsers++
+        return () => {
+          tsStyleUsers--
+          if (tsStyleUsers <= 0) {
+            try { if (tag.isConnected) tag.remove() } catch {}
+            if (tsStyleEl === tag) tsStyleEl = null
+          }
+        }
+      }, [])
+    }
+    //#endregion
+
     /** 侧栏今日用量小卡片（开关开启时渲染）。 */
     function createTodayCard(bridge) {
       return function TodaySidebarCard(props) {
+        useTsStyles()
         const wide = !(props && props.wide === false)
         const [data, setData] = React.useState(null)
         const [tip, setTip] = React.useState(null)
@@ -1324,20 +1386,29 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
             })())
         }
 
-        // 各模型今日逐小时序列（0..当前小时），配色与统计页一致
-        const todayRecords = data.records.filter((r) => r.d === todayK)
-        const nowHour = new Date().getHours()
+        // 各模型近24小时逐小时序列（24 个整点桶，跨天部分即昨日同时段），配色与统计页一致
+        const endH = new Date()
+        endH.setMinutes(0, 0, 0)
+        const hourSlots = []
+        for (let k = 23; k >= 0; k--) {
+          const t = endH.getTime() - k * 3600000
+          hourSlots.push({ d: keyOf(t), h: new Date(t).getHours() })
+        }
+        const hourLabels = hourSlots.map((s) => s.d === todayK ? s.h + ':00' : '昨日' + s.h + ':00')
+        const hourIdx = new Map()
+        for (let i = 0; i < hourSlots.length; i++) hourIdx.set(hourSlots[i].d + '|' + hourSlots[i].h, i)
         const modelHourSeries = []
-        // 今日模型列表从今日记录取（both.byModel 含昨日，会把昨天的模型也画进来）
-        const todayModels = new Set(todayRecords.map((r) => r.m))
-        for (const mk of Array.from(todayModels).sort()) {
-          const vals = []
-          for (let h = 0; h <= nowHour; h++) {
-            let s = 0
-            for (const r of todayRecords) { if (r.h === h && r.m === mk) s += tok(r) }
-            vals.push(s)
-          }
-          modelHourSeries.push({ name: mk, shortName: (data.models[mk] || {}).model || mk, color: modelColor(mk), values: vals })
+        // 窗口内有量的模型才进序列（24 小时无用量的模型不画零线）
+        const hourArrs = new Map()
+        for (const r of data.records) {
+          const idx = hourIdx.get(r.d + '|' + r.h)
+          if (idx === undefined) continue
+          let arr = hourArrs.get(r.m)
+          if (arr === undefined) { arr = new Array(24).fill(0); hourArrs.set(r.m, arr) }
+          arr[idx] += tok(r)
+        }
+        for (const mk of Array.from(hourArrs.keys()).sort()) {
+          modelHourSeries.push({ name: mk, shortName: (data.models[mk] || {}).model || mk, color: modelColor(mk), values: hourArrs.get(mk) })
         }
 
         return el('div', isFloat
@@ -1354,7 +1425,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
               title: isFloat ? '收回侧边栏' : '弹出为浮窗（可拖到屏幕任意位置）',
               onClick: (e) => { if (e.stopPropagation) e.stopPropagation(); tsFloatSet(!isFloat) }
             }, isFloat ? '📌' : '⧉')),
-          el(TodayChart, { series: modelHourSeries, n: nowHour + 1, floatTip: isFloat }),
+          el(TodayChart, { series: modelHourSeries, n: 24, labels: hourLabels, floatTip: isFloat }),
           modelHourSeries.length > 0
             ? el('div', { className: 'ts-todaymodels' },
                 modelHourSeries.map((s, si) =>
@@ -1398,11 +1469,13 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         }
       }
 
-      const sectionStyle = document.createElement('style')
-      sectionStyle.setAttribute('data-plugin-css', 'dshp-inx-token-stats/settings.css')
-      sectionStyle.textContent = CSS
-      document.head.appendChild(sectionStyle)
-      ctx.effect(() => () => sectionStyle.remove(), 'dshp-inx-token-stats: section styles')
+      tsEnsureStyles()
+      ctx.effect(() => () => {
+        if (tsStyleUsers <= 0 && tsStyleEl) {
+          try { tsStyleEl.remove() } catch {}
+          tsStyleEl = null
+        }
+      }, 'dshp-inx-token-stats: section styles')
 
       // 旧 localStorage 开关一次性上收至标准 settings（仅当用户曾显式打开过；
       // storages 文件迁移由部署者手动完成，插件代码不做）。
@@ -1451,6 +1524,7 @@ div:has(> div[data-slot="sidebar.footer.action"]){flex-direction:column;align-it
         return on === true ? el(TodayCard, props) : null
       }
       function TodayFloatEntry() {
+        useTsStyles()
         const on = useTodayPref()
         const fl = useTsFloat()
         if (on !== true || !fl.open) return null

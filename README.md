@@ -136,6 +136,7 @@ node --check lib/index.js && node --check client.js
 
 ```
 lib/index.js     Host 半：sessionQuery 聚合 + 标准 settings 偏好（showToday/defaultRange）+ 偏好路由
+lib/shared.js    Host 三件套（settingsNamespace/json/sameOrigin/readBody，六插件逐字相同）
 lib/engine.js    聚合引擎（指纹持久缓存 + 后台渐进扫描 + 队列合并 + 删会话清理）
 lib/fsindex.js   会话日志文件索引/指纹/seed 跳过（纯 node:fs，可单测）
 lib/fold.js      会话日志折叠抽取（usage 终值覆盖采样、seed 跳过、路由半更新）
